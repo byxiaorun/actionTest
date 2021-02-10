@@ -88,14 +88,17 @@ jobs:
       - name: Send Message
         if: success()
         run: |
-          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
+          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$
+          " | jq -r '.check_suite_id'`
           # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法在将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
           artifactId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/artifacts" | jq -r '.artifacts[0].id'`
           # 拼接下载地址
           archiveDownUrl="https://github.com/$GITHUB_REPOSITORY/suites/$checkSuiteId/artifacts/$artifactId"
           echo checkSuiteId=$checkSuiteId && echo artifactId=$artifactId && echo archiveDownUrl=$archiveDownUrl
+          # workflow 详情页面
+          wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c 'from urllib.parse import quote;desp="'$releaseApkName'\r\n\r\n'$archiveDownUrl'";print("%s"%(quote(desp)))'`
+          desp=`python3 -c 'from urllib.parse import quote;desp="'$releaseApkName'\r\n\r\n'$archiveDownUrl'\r\n\r\n'$wfRunUrl'";print("%s"%(quote(desp)))'`
           curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedManagerWithRepo.$APPVEYOR_BUILD_NUMBER&desp=$desp"
       - name: Delete Canceled Workflow
         run: |
