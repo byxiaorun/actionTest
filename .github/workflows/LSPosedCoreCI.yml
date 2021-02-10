@@ -117,8 +117,10 @@ jobs:
           # 拼接下载地址
           archiveDownUrl="https://github.com/$GITHUB_REPOSITORY/suites/$checkSuiteId/artifacts/$artifactId"
           echo checkSuiteId=$checkSuiteId && echo artifactId=$artifactId && echo archiveDownUrl=$archiveDownUrl
+          # workflow 详情页面
+          wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c 'from urllib.parse import quote;desp="'$releaseZipName'\r\n\r\n'$archiveDownUrl'";print("%s"%(quote(desp)))'`
+          desp=`python3 -c 'from urllib.parse import quote;desp="'$releaseZipName'\r\n\r\n'$archiveDownUrl'\r\n\r\n'$wfRunUrl'";print("%s"%(quote(desp)))'`
           curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedCore.$APPVEYOR_BUILD_NUMBER&desp=$desp"
 
       - name: Delete Canceled Workflow
