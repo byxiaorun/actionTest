@@ -1,4 +1,4 @@
-name: LSPosed_Core_CI
+name: LSPosed Core CI
 
 on:
   push:
