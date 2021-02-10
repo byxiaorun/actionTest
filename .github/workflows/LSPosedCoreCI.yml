@@ -1,0 +1,138 @@
+name: LSPosed_Core_CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+    - 'lsp/**'
+    - '.github/workflows/LSPosedCoreCI.yml'
+  schedule:
+    - cron: '0 */1 * * *'
+
+env:
+  # LSP giturl
+  LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
+  # core actions 地址
+  CORE_CI_URL: 'https://github.com/LSPosed/LSPosed/actions?query=workflow%3ACore'
+  # 老包名
+  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
+  # 新包名
+  MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
+  # 新管理器签名
+  SIGIN_KEY_BYTE: ${{ secrets.SIGN_KEY_BYTE }}
+  # github api 请求头的 accept
+  GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
+  GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
+  # 代码保存位置文件夹名
+  WORK_DIR_NAME: 'LSPosed'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    #if: ${{ startsWith(github.event.head_commit.message, 'lspcore') }}
+    steps:
+      - name: Is it necessary
+        id: isRun
+        run: |
+          # 当前时间戳
+          TIME_NOW=`date +%s`
+          # 最近一次构建时间戳
+          TIME_LAST=$(date -d `curl -s $CORE_CI_URL | grep '<time-ago' -m 1 | awk -F '"' '{print $2}'` +%s)
+          # 最近一次构建在1小时之内的才继续
+          if [ `expr $TIME_NOW - $TIME_LAST` -lt 3600 ]; then isRun=Y; else isRun=Y; fi
+          # 添加到 outputs 和 环境变量中
+          echo isRun=$isRunNum && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
+
+      - name: Clone Code
+        if: ${{ steps.isRun.outputs.isRun == 'Y' }}
+        run: |
+          WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
+          echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
+
+      - name: set up JDK 1.8
+        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+
+      - name: Get version code
+        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        run: |
+          # 从源仓库的 actions 页面获取 run_number 来计算 versionCode
+          echo APPVEYOR_BUILD_NUMBER=$(expr `curl -s $CORE_CI_URL | grep -E '^ *#([0-9]*):$' -m 1 | grep -oE '[0-9]*'` + 4999) >> $GITHUB_ENV
+          echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
+
+      - name: Customize
+        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        run: |
+          cd $WORK_DIR
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle
+          # Magisk文件 sha256 计算时不处理 .sha256 文件 本地编译时会出现循环计算所有文件(包括.sha256文件)sha256值直到文件名超长
+          sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
+          # Magisk 模块包输出文件名
+          sed -i 's/def zipFileName =.*/def zipFileName = \"i${module_name}-${rootProject.ext.versionName}-core-${rootProject.ext.versionCode}-${variantLowered}.zip\"/g' $WORK_DIR/core/build.gradle
+          # Magisk 安装脚本中修改包名 管理器配置保存位置
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/template_override/customize.sh
+          # Core Hook 管理器修改激活状态、默认管理器包名 在 /data/misc/lsp_xxx/0/config/ 下新建 installer 文件,内容写入其他管理器包名后重启可修改默认的指定管理器
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/src/main/cpp/main/src/config_manager.h
+          # Core 校验管理器签名 新增一条
+          sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
+          sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
+
+      - name: Build with Gradle
+        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        env:
+          KEYSTORE_PASS: ${{ secrets.SIGN_KEY_STORE_PASS }}
+          ALIAS_NAME: ${{ secrets.SIGN_KEY_ALIAS }}
+          ALIAS_PASS: ${{ secrets.SIGN_KEY_PASS }}
+        run: cd $WORK_DIR && bash $WORK_DIR/gradlew zipRelease
+
+      - name: Prepare for Upload
+        id: prepareUpload
+        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        run: |
+          releaseDir=$WORK_DIR/core/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
+          # zip 包文件名(无后缀)
+          releaseZipName=`cd $releaseDir && ls iLSPosed-v*-release.zip | awk -F '.zip' '{print $1}'` && echo "::set-output name=releaseZipName::$releaseZipName" && echo "releaseZipName=$releaseZipName" >> $GITHUB_ENV
+          # 解压
+          unzipPath=$releaseDir/i$WORK_DIR_NAME && unzip $releaseDir/$releaseZipName.zip -d $unzipPath
+          # 从 zip 包解压出来的文件路径
+          releaseZipFiles=$unzipPath/** && echo "::set-output name=releaseZipFiles::$releaseZipFiles" && echo "releaseZipFiles=$releaseZipFiles" >> $GITHUB_ENV
+          #ls $releaseZipFiles
+
+      - name: Upload release
+        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.prepareUpload.outputs.releaseZipName }}
+          path: ${{ steps.prepareUpload.outputs.releaseZipFiles }}
+
+      - name: Send Message
+        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        run: |
+          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
+          # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法在将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
+          artifactId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/artifacts" | jq -r '.artifacts[0].id'`
+          # 拼接下载地址
+          archiveDownUrl="https://github.com/$GITHUB_REPOSITORY/suites/$checkSuiteId/artifacts/$artifactId"
+          echo checkSuiteId=$checkSuiteId && echo artifactId=$artifactId && echo archiveDownUrl=$archiveDownUrl
+          # urlencode
+          desp=`python3 -c 'from urllib.parse import quote;desp="'$releaseZipName'\r\n\r\n'$archiveDownUrl'";print("%s"%(quote(desp)))'`
+          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedCore.$APPVEYOR_BUILD_NUMBER&desp=$desp"
+
+      - name: Delete Canceled Workflow
+        if: always()
+        run: |
+          # 获取所有被取消的workflow run id
+          CANCELLED_IDS=`python3 -c 'import os,json,urllib.request as rq; header={"Accept":"'$GIT_API_ACCEPT'","Authorization":"token '${{ secrets.ACTIONS_TOKEN }}'"}; req=rq.Request("'$GIT_API_RUNS_LIST'",headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow["id"]) for flow in flows["workflow_runs"] if flow["conclusion"]=="cancelled"]; print(" ".join(ids))'`
+          echo CANCELLED_IDS=$CANCELLED_IDS
+          for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+
+      - name: Cancel or Delete Self if Skiped
+        if: ${{ steps.isRun.outputs.isRun == 'N' }}
+        run: |
+          # 删除一般不会成功,应该是因为无法删除正在运行的任务,加上取消 $GITHUB_RUN_ID 和 ${{ github.run_id }} 同一个值
+          curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X POST $GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel
+          curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID"
+
