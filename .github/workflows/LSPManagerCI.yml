@@ -10,14 +10,14 @@ on:
     - cron: '0 */1 * * *'
 
 env:
+  # 新包名
+  MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
+  # 老包名
+  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
   # LSP giturl
   LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
   # 管理器actions地址
   MANAGER_CI_URL: 'https://github.com/LSPosed/LSPosed/actions?query=workflow%3AManager'
-  # 老包名
-  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
-  # 新包名
-  MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
   # 获取所有 workflows API 地址
