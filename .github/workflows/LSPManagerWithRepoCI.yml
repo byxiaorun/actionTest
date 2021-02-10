@@ -97,7 +97,7 @@ jobs:
           # workflow 详情页面
           wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c "from urllib.parse import quote;print(quote('$releaseApkName\r\n\r\n$wfRunUrl\r\n\r\n$archiveDownUrl'))"`
+          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseApkName]($archiveDownUrl)'))"`
           curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedManagerWithRepo.$APPVEYOR_BUILD_NUMBER&desp=$desp"
       - name: Delete Canceled Workflow
         run: |
