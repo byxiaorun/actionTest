@@ -88,8 +88,7 @@ jobs:
       - name: Send Message
         if: success()
         run: |
-          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$
-          " | jq -r '.check_suite_id'`
+          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
           # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法在将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
           artifactId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/artifacts" | jq -r '.artifacts[0].id'`
           # 拼接下载地址
