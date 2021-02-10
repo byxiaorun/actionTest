@@ -51,7 +51,7 @@ jobs:
           # 包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle
           # APP 显示名 2020-02-29 commit d5e20bb1c92e1db57064c708b3d25029b9014eca 官方将 "LSPosed Manager" 改为 "LSPosed"
-          sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
+          sed -i "s/>LSPosed</>iLSPManager Manager</g" $WORK_DIR/app/src/main/res/values/strings.xml
           # shortcut 中的包名
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
           # 输出文件名
