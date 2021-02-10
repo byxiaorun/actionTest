@@ -97,12 +97,12 @@ jobs:
           # workflow 详情页面
           wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c 'from urllib.parse import quote;desp="'$releaseApkName'\r\n\r\n'$archiveDownUrl'\r\n\r\n'$wfRunUrl'";print("%s"%(quote(desp)))'`
+          desp=`python3 -c "from urllib.parse import quote;print(quote('$releaseApkName\r\n\r\n$wfRunUrl\r\n\r\n$archiveDownUrl'))"`
           curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedManagerWithRepo.$APPVEYOR_BUILD_NUMBER&desp=$desp"
       - name: Delete Canceled Workflow
         run: |
           # 获取所有被取消的workflow run id
-          CANCELLED_IDS=`python3 -c 'import os,json,urllib.request as rq; header={"Accept":"'$GIT_API_ACCEPT'"}; req=rq.Request("'$GIT_API_RUNS_LIST'",headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow["id"]) for flow in flows["workflow_runs"] if flow["conclusion"]=="cancelled"]; print(" ".join(ids))'`
+          CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': 'token $TOKEN'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
           echo CANCELLED_IDS=$CANCELLED_IDS
           for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
 
