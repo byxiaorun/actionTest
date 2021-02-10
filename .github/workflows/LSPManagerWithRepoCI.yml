@@ -33,19 +33,19 @@ jobs:
           WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
           git clone -b neko-module-repo $LSP_GIT_URL $WORK_DIR --recursive
       - name: set up JDK 1.8
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: success()
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
 
       - name: Get version code
-        if: ${{ success() }}
+        if: success()
         run: |
           # 从源仓库的 actions 页面获取 run_number 来计算 versionCode
           echo APPVEYOR_BUILD_NUMBER=$(expr `curl -s $MANAGER_CI_URL | grep -E '^ *#([0-9]*):$' -m 1 | grep -oE '[0-9]*'` + 4999) >> $GITHUB_ENV
           echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
       - name: Customize
-        if: ${{ success() }}
+        if: success()
         run: |
           cd $WORK_DIR
           # 包名
@@ -57,7 +57,7 @@ jobs:
           # 输出文件名
           sed -i 's/outputFileName =.*/outputFileName = \"iLSPosedManagerRepo-${defaultConfig.versionName}-${rootProject.ext.versionCode}-${buildType.name}.apk\"/g' $WORK_DIR/app/build.gradle
       - name: Build with Gradle
-        if: ${{ success() }}
+        if: success()
         id: buildRelease
         run: |
           cd $WORK_DIR && bash $WORK_DIR/gradlew :app:assembleRelease
@@ -66,7 +66,7 @@ jobs:
           # apk 输出文件名(无后缀)
           releaseApkName=`cd $releaseApkDir && ls iLSPosed*.apk | awk -F '.apk' '{print $1}'` && echo "::set-output name=releaseApkName::$releaseApkName" && echo "releaseApkName=$releaseApkName" >> $GITHUB_ENV
       - name: Sign Manager Release
-        if: ${{ success() }}
+        if: success()
         id: sign
         uses: LSPosed/sign-android-release@v1.0.0
         with:
@@ -79,14 +79,14 @@ jobs:
           BUILD_TOOLS_VERSION: "30.0.3"
 
       - name: Upload signed apk
-        if: ${{ success() }}
+        if: success()
         uses: actions/upload-artifact@v2
         with:
           name: ${{ steps.buildRelease.outputs.releaseApkName }}
           path: ${{ steps.sign.outputs.signedReleaseFile }}
 
       - name: Send Message
-        if: ${{ success() }}
+        if: success()
         run: |
           checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
           # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法在将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
@@ -96,7 +96,7 @@ jobs:
           echo checkSuiteId=$checkSuiteId && echo artifactId=$artifactId && echo archiveDownUrl=$archiveDownUrl
           # urlencode
           desp=`python3 -c 'from urllib.parse import quote;desp="'$releaseApkName'\r\n\r\n'$archiveDownUrl'";print("%s"%(quote(desp)))'`
-          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedManager.$APPVEYOR_BUILD_NUMBER&desp=$desp"
+          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedManagerWithRepo.$APPVEYOR_BUILD_NUMBER&desp=$desp"
       - name: Delete Canceled Workflow
         run: |
           # 获取所有被取消的workflow run id
