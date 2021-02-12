@@ -20,7 +20,7 @@ env:
   LSP_ACTION_NAME: 'Manager'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
-  # 获取本仓库所有 workflows API 地址
+  # 获取所有 workflows API 地址
   GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
   # 获取 lsp 官方仓库所有 workflow 的API地址
   GIT_API_RUNS_LIST_LSP: 'https://api.github.com/repos/LSPosed/LSPosed/actions/runs'
@@ -33,6 +33,7 @@ jobs:
     #if: ${{ startsWith(github.event.head_commit.message, 'lspmanager') }}
     steps:
       - name: Get Latest CI Info
+        id: ciInfo
         run: |
           # 获取 push 触发的最新一次构建事件
           latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='$LSP_ACTION_NAME'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
@@ -49,23 +50,23 @@ jobs:
           # 2. LSP官方最近一次构建在1小时之内的
           #   2.1 commit信息以 manager 单词开头的(肯定是push)执行
           #   2.2 定时任务schedule触发的执行
-          [[ $COMMIT_MESSAGE == forceManager* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == manager* || "$GITHUB_EVENT_NAME" == "schedule")) ]] && echo isRun=Y || echo isRun=N
-          echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
+          [[ $COMMIT_MESSAGE == forceCore* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == core* || "$GITHUB_EVENT_NAME" == "schedule")) ]] && isRun=Y || isRun=N
+          echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
 
       - name: Clone Code
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
           git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
 
       - name: set up JDK 1.8
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
 
       - name: Customize
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           cd $WORK_DIR
           # 包名
@@ -78,7 +79,7 @@ jobs:
           sed -i 's/outputFileName =.*/outputFileName = \"iLSPosedManager-${defaultConfig.versionName}-${rootProject.ext.versionCode}-${buildType.name}.apk\"/g' $WORK_DIR/app/build.gradle
 
       - name: Build with Gradle
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: buildRelease
         run: |
           cd $WORK_DIR && bash $WORK_DIR/gradlew :app:assembleRelease
@@ -88,7 +89,7 @@ jobs:
           releaseApkName=`cd $releaseApkDir && ls iLSPosed*.apk | awk -F '.apk' '{print $1}'` && echo "::set-output name=releaseApkName::$releaseApkName" && echo "releaseApkName=$releaseApkName" >> $GITHUB_ENV
 
       - name: Sign Manager Release
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: sign
         uses: LSPosed/sign-android-release@v1.0.0
         with:
@@ -101,14 +102,14 @@ jobs:
           BUILD_TOOLS_VERSION: "30.0.3"
 
       - name: Upload signed apk
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/upload-artifact@v2
         with:
           name: ${{ steps.buildRelease.outputs.releaseApkName }}
           path: ${{ steps.sign.outputs.signedReleaseFile }}
 
       - name: Send Message
-        if: ${{ steps.isRun.outputs.isRun == 'Y' && success() }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
           # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
@@ -130,7 +131,7 @@ jobs:
           for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
 
       - name: Cancel or Delete Self if Skiped
-        if: ${{ steps.isRun.outputs.isRun == 'N' }}
+        if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
         run: |
           # 删除一般不会成功,应该是因为无法删除正在运行的任务,加上取消 $GITHUB_RUN_ID 和 ${{ github.run_id }} 同一个值
           curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X POST "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel"
