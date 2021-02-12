@@ -33,8 +33,9 @@ jobs:
         run: |
           # 获取 push 触发的最新一次构建事件
           latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='Core'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
+          #latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='Core'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
           # 赋值到变量中
-          eval $(echo $latestCI | awk -F ' -;- ' 'printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)')
+          eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
           # run number 用来计算最新的 versionCode
           echo "::set-output name=runNum::$runNum" && echo "runNum=$runNum" >> $GITHUB_ENV
           # 最新一次构建的commit注释信息
