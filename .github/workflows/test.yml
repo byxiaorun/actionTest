@@ -31,7 +31,8 @@ jobs:
     steps:
       - name: test
         run: |
-          latestCI=`python3 -c "import json;from urllib import request as rq; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());print([run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='Core'][0])"`
+          latestCI=`python3 -c "import json;from urllib import request as rq; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());print([run for run in runs['workflow_runs'] if run['id']==558325198][0])"`
+          #latestCI=`python3 -c "import json;from urllib import request as rq; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());print([run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='Core'][0])"`
           echo "latestCI=$latestCI\nEOFF" << EOFF >> $GITHUB_ENV
       - name: test1
         run: echo $latestCI
