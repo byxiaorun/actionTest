@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-    - 'lsp/**'
+    - 'lsp/manager'
     - '.github/workflows/LSPManagerCI.yml'
   schedule:
     - cron: '0 */1 * * *'
