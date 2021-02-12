@@ -41,7 +41,7 @@ jobs:
           # 最新一次构建的commit注释信息
           echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
           # 最近一次构建时间 与 当前时间 间隔 最近一次构建在1小时之内的才继续
-          if [ $(expr `date +%s` - `date $createTime +%s`) -lt 3600 ]; then isRun=Y; else isRun=N; fi
+          if [ $(expr `date +%s` - `date -d $createTime +%s`) -lt 3600 ]; then isRun=Y; else isRun=N; fi
           echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
       - name: test1
         run: |
