@@ -53,9 +53,9 @@ jobs:
           # 2. LSP官方最近一次构建在1小时之内的
           #   2.1 commit信息以 core 单词开头的(肯定是push)执行
           #   2.2 定时任务schedule触发的执行
-          [[ $COMMIT_MESSAGE == forceCore* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == core* || "$GITHUB_EVENT_NAME" == "schedule")) ]] echo isRun=Y || isRun=N
+          [[ $COMMIT_MESSAGE == forceCore* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == core* || "$GITHUB_EVENT_NAME" == "schedule")) ]] isRun=Y || isRun=N
           echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
-          echo isRun=$isRun
+          echo $isRun
 
       - name: Clone Code
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
