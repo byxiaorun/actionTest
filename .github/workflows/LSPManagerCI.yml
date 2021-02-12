@@ -53,7 +53,7 @@ jobs:
           #   2.1 commit信息以 manager 单词开头的(肯定是push)执行
           #   2.2 定时任务schedule触发的执行
           echo COMMIT_MESSAGE=$COMMIT_MESSAGE
-          [[ $COMMIT_MESSAGE == forceCore* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == core* || "$GITHUB_EVENT_NAME" == "schedule")) ]] && isRun=Y || isRun=N
+          [[ $COMMIT_MESSAGE == forceManager* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == manager* || "$GITHUB_EVENT_NAME" == "schedule")) ]] && isRun=Y || isRun=N
           echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
 
       - name: Clone Code
