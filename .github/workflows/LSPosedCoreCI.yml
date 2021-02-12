@@ -44,8 +44,7 @@ jobs:
           echo latestCI=$latestCI
           echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
           # run number 用来计算最新的 versionCode
-          echo "APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999`" >> $GITHUB_ENV
-          echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
+          APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV
           # 最新一次构建的commit注释信息
           echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
           # 最近一次构建时间 与 当前时间 间隔
@@ -56,6 +55,7 @@ jobs:
           #   2.2 定时任务schedule触发的执行
           [[ $COMMIT_MESSAGE == forceCore* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == core* || "$GITHUB_EVENT_NAME" == "schedule")) ]] && echo isRun=Y || echo isRun=N
           echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
+          echo $isRun
 
       - name: Clone Code
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
