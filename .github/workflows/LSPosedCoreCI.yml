@@ -28,6 +28,8 @@ env:
   GIT_API_RUNS_LIST_LSP: 'https://api.github.com/repos/LSPosed/LSPosed/actions/runs'
   # 代码保存位置文件夹名
   WORK_DIR_NAME: 'LSPosed'
+  # 本仓库 commit message
+  COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
 
 jobs:
   build:
