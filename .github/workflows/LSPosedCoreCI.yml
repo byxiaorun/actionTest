@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-    - 'lsp/**'
+    - 'lsp/core'
     - '.github/workflows/LSPosedCoreCI.yml'
   schedule:
     - cron: '0 */1 * * *'
