@@ -1,0 +1,40 @@
+name: TEST
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+    - '.github/workflows/test.yml'
+
+env:
+  # LSP giturl
+  LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
+  # 管理器actions地址
+  MANAGER_CI_URL: 'https://github.com/LSPosed/LSPosed/actions?query=workflow%3AManager'
+  # 老包名
+  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
+  # 新包名
+  MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
+  # github api 请求头的 accept
+  GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # 获取所有 workflows API 地址
+  GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
+  # lsp 的API地址
+  GIT_API_RUNS_LIST_LSP: 'https://api.github.com/repos/LSPosed/LSPosed/actions/runs'
+  # 代码保存位置
+  WORK_DIR_NAME: 'LSPosed'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    #if: ${{ startsWith(github.event.head_commit.message, 'lspmanager') }}
+    steps:
+      - name: test
+        run: |
+          latestCI=`python3 -c "import json;from urllib import request as rq; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());print([run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='Core'][0])"`
+          echo "latestCI=$latestCI\nEOFF" << EOFF >> $GITHUB_ENV
+      - name: test1
+        run: echo $latestCI
+          
+          
+          
