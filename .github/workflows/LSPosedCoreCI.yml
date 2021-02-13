@@ -22,6 +22,8 @@ env:
   SIGIN_KEY_BYTE: ${{ secrets.SIGN_KEY_BYTE }}
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # github api 请求头的验证 token
+  GIT_API_AUTH: 'token ${{ github.token }}'
   # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
   GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
   # 获取 lsp 官方仓库所有 workflow 的API地址
@@ -40,7 +42,7 @@ jobs:
         id: ciInfo
         run: |
           # 获取 push 触发的最新一次构建事件
-          latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='$LSP_ACTION_NAME'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
+          latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTH'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='$LSP_ACTION_NAME'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
           # 赋值到变量中
           eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
           echo latestCI=$latestCI && echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
@@ -118,9 +120,9 @@ jobs:
       - name: Send Message
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
-          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
+          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: $GIT_API_AUTH" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
           # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
-          artifactId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/artifacts" | jq -r '.artifacts[0].id'`
+          artifactId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: $GIT_API_AUTH" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/artifacts" | jq -r '.artifacts[0].id'`
           # 拼接下载地址
           archiveDownUrl="https://github.com/$GITHUB_REPOSITORY/suites/$checkSuiteId/artifacts/$artifactId"
           echo checkSuiteId=$checkSuiteId && echo artifactId=$artifactId && echo archiveDownUrl=$archiveDownUrl
@@ -134,14 +136,14 @@ jobs:
         if: always()
         run: |
           # 获取所有被取消的workflow run id
-          CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': 'token ${{ secrets.ACTIONS_TOKEN }}'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
+          CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
           echo CANCELLED_IDS=$CANCELLED_IDS
-          for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+          for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
 
       - name: Cancel or Delete Self if Skiped
         if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
         run: |
           # 删除一般不会成功,应该是因为无法删除正在运行的任务,加上取消 $GITHUB_RUN_ID 和 ${{ github.run_id }} 同一个值
-          curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X POST $GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel
-          curl -s -H "Authorization: token ${{ secrets.ACTIONS_TOKEN }}" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID"
+          curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X POST $GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel
+          curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID"
 
