@@ -33,18 +33,19 @@ jobs:
     steps:
       - name: Get Latest CI Info
         run: |
+          echo GITHUB_ENV=$GITHUB_ENV
           # 获取 push 触发的最新一次构建事件
           #latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='Core'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
-          latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['id']==558325198][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
+          #latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['id']==558325198][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
           # 赋值到变量中
-          eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
+          #eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
           # run number 用来计算最新的 versionCode
-          echo "::set-output name=runNum::$runNum" && echo "runNum=$runNum" >> $GITHUB_ENV
+          #echo "::set-output name=runNum::$runNum" && echo "runNum=$runNum" >> $GITHUB_ENV
           # 最新一次构建的commit注释信息
-          echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
+          #echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
           # 最近一次构建时间 与 当前时间 间隔 最近一次构建在1小时之内的才继续
-          if [ $(expr `date +%s` - `date -d $createTime +%s`) -lt 3600 ]; then isRun=Y; else isRun=N; fi
-          echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
+          #if [ $(expr `date +%s` - `date -d $createTime +%s`) -lt 3600 ]; then isRun=Y; else isRun=N; fi
+          #echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
       - name: test1
         run: |
           echo GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME
