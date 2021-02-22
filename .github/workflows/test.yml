@@ -9,23 +9,26 @@ on:
   #  - cron: '*/1 * * * *'
 
 env:
-  # LSP giturl
-  LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
-  # 管理器actions地址
-  MANAGER_CI_URL: 'https://github.com/LSPosed/LSPosed/actions?query=workflow%3AManager'
-  # 老包名
-  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
   # 新包名
   MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
+  # 老包名
+  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
+  # LSP giturl
+  LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
+  # 管理器actions NAME
+  LSP_ACTION_NAME: 'Manager'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # github api 请求头的验证 token
+  GIT_API_AUTH: 'token ${{ github.token }}'
   # 获取所有 workflows API 地址
   GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
-  # lsp 的API地址
+  # 获取 lsp 官方仓库所有 workflow 的API地址
   GIT_API_RUNS_LIST_LSP: 'https://api.github.com/repos/LSPosed/LSPosed/actions/runs'
   # 代码保存位置
   WORK_DIR_NAME: 'LSPosed'
-  GIT_API_AUTHO: 'token ${{ github.token }}'
+  # 本仓库 commit message
+  COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
 
 jobs:
   build:
@@ -35,30 +38,35 @@ jobs:
       buileOutput: ${{ steps.test1.output.aaa }}
     steps:
       - name: Get Latest CI Info
-        run: echo "111" >> 1.txt
-      - name: upload
-        uses: actions/upload-artifact@v2
-        with:
-          name: test
-          path: 1.txt
-      - name: test1
-        id: test1
         run: |
-          echo GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME
-          echo '----------------------------------------------------------------------------------------------------'
-          echo "::set-output name=aaa::aaa.buileOutput.value"
+          # 获取所有被取消的workflow run id
+          #CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
+          #echo CANCELLED_IDS=$CANCELLED_IDS
+          #for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+          python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode()); print(flows)"
+#      - name: upload
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: test
+#          path: 1.txt
+#      - name: test1
+#        id: test1
+#        run: |
+#          echo GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME
+#          echo '----------------------------------------------------------------------------------------------------'
+#          echo "::set-output name=aaa::aaa.buileOutput.value"
   
-  testJob:
-    runs-on: ubuntu-latest
-    needs: [build]
-    env:
-      aaa: ${{ needs.build.outputs.buileOutput }}
-    steps:
-      - name: test
-        run: |
-          echo $aaa
-      - name: test2
-        run: |
-          echo $aaa
+#  testJob:
+#    runs-on: ubuntu-latest
+#    needs: [build]
+#    env:
+#      aaa: ${{ needs.build.outputs.buileOutput }}
+#    steps:
+#      - name: test
+#        run: |
+#          echo $aaa
+#      - name: test2
+#        run: |
+#          echo $aaa
           
           
