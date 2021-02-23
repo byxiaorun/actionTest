@@ -98,7 +98,7 @@ jobs:
           KEYSTORE_PASS: ${{ secrets.SIGN_KEY_STORE_PASS }}
           ALIAS_NAME: ${{ secrets.SIGN_KEY_ALIAS }}
           ALIAS_PASS: ${{ secrets.SIGN_KEY_PASS }}
-        run: cd $WORK_DIR && bash $WORK_DIR/gradlew zipRelease
+        run: cd $WORK_DIR && bash $WORK_DIR/gradlew zipRelease --stacktrace
 
       - name: Prepare for Upload
         id: prepareUpload
