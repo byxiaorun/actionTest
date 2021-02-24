@@ -16,7 +16,7 @@ env:
   MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
   # LSP giturl
   LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
-  # 管理器actions NAME
+  # 管理器 actions NAME
   LSP_ACTION_NAME: 'Core'
   # 新管理器签名
   SIGIN_KEY_BYTE: ${{ secrets.SIGN_KEY_BYTE }}
