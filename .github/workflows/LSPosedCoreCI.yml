@@ -16,10 +16,6 @@ env:
   MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
   # LSP giturl
   LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
-  # 管理器 actions NAME
-  LSP_ACTION_NAME: 'Core'
-  # 新管理器签名
-  SIGIN_KEY_BYTE: ${{ secrets.SIGN_KEY_BYTE }}
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
   # github api 请求头的验证 token
@@ -32,11 +28,18 @@ env:
   WORK_DIR_NAME: 'LSPosed'
   # 本仓库 commit message
   COMMIT_MESSAGE: '${{ github.event.head_commit.message }}'
+  # build 命令选项
+  BUILD_COMMAND: 'zipRelease'
+  # 目标 actions NAME 只处理官方该action的信息
+  LSP_ACTION_NAME: 'Core'
+  # server酱发送信息时的文件名前缀
+  SCEND_MSG_NAME: 'iLSPosedCore'
+  # 新管理器签名
+  SIGIN_KEY_BYTE: ${{ secrets.SIGN_KEY_BYTE }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    #if: ${{ startsWith(github.event.head_commit.message, 'lspcore') }}
     steps:
       - name: Get Latest CI Info
         id: ciInfo
@@ -47,26 +50,22 @@ jobs:
           eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
           echo latestCI=$latestCI && echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
           # run number 用来计算最新的 versionCode
-          # 20210225 a7500c73f3043bc348d5be4004d7ac3b9bf1bd7a 开始，获取versionCode 的方式改为了 commitCount+4200
+          # 20210225 a7500c73f3043bc348d5be4004d7ac3b9bf1bd7a 开始，官方获取versionCode 的方式改为了 commitCount+4200
           #APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
           # 最新一次构建的commit注释信息
           echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
           # 最近一次构建时间 与 当前时间 间隔
           TIME_INTERVAL=$(expr `date +%s` - `date -d $createTime +%s`)
-          # 1. commit信息以 forceCore 单词开头的(肯定是push)直接开始执行
-          # 2. LSP官方最近一次构建在1小时之内的
-          #   2.1 commit信息以 core 单词开头的(肯定是push)执行
-          #   2.2 定时任务schedule触发的执行
+          # 1. 触发当前action的commit信息以 force 单词开头的(肯定是push)直接开始执行
+          # 2. 定时任务schedule触发的且LSP官方最近一次构建在1小时之内的
           echo COMMIT_MESSAGE=$COMMIT_MESSAGE
-          [[ $COMMIT_MESSAGE == forceCore* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == core* || "$GITHUB_EVENT_NAME" == "schedule")) ]] && isRun=Y || isRun=N
+          [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") ]] && isRun=Y || isRun=N
           echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
-
       - name: Clone Code
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
           echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
-
       - name: set up JDK 1.8
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/setup-java@v1
@@ -77,6 +76,7 @@ jobs:
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           cd $WORK_DIR
+          # 包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle
           # Magisk文件 sha256 计算时不处理 .sha256 文件 本地编译时会出现循环计算所有文件(包括.sha256文件)sha256值直到文件名超长
           sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
@@ -92,34 +92,33 @@ jobs:
           sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
           sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
           #sed -i 's/Utils.logW("hookXposedInstaller:/Utils.logW(classLoader);Utils.logW("hookXposedInstaller:/g' $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
-
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
-        env:
-          KEYSTORE_PASS: ${{ secrets.SIGN_KEY_STORE_PASS }}
-          ALIAS_NAME: ${{ secrets.SIGN_KEY_ALIAS }}
-          ALIAS_PASS: ${{ secrets.SIGN_KEY_PASS }}
-        run: cd $WORK_DIR && bash $WORK_DIR/gradlew zipRelease #--stacktrace
-
-      - name: Prepare for Upload
-        id: prepareUpload
-        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        id: buildRelease
         run: |
+          cd $WORK_DIR && bash $WORK_DIR/gradlew $BUILD_COMMAND
+          # 编译产品文件输出路径
           releaseDir=$WORK_DIR/core/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
-          # zip 包文件名(无后缀)
-          releaseZipName=`cd $releaseDir && ls iLSPosed-v*-release.zip | awk -F '.zip' '{print $1}'` && echo "::set-output name=releaseZipName::$releaseZipName" && echo "releaseZipName=$releaseZipName" >> $GITHUB_ENV
+          # 输出包文件名(无后缀)
+          releaseName=`cd $releaseDir && ls iLSPosed-v*-release.zip | awk -F '.zip' '{print $1}'` && echo "::set-output name=releaseName::$releaseName" && echo "releaseName=$releaseName" >> $GITHUB_ENV
+          # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
+          versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
+          echo versionCode=$versionCode
+      - name: Prepare for Upload
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        id: prepareUpload
+        run: |
           # 解压
-          unzipPath=$releaseDir/i$WORK_DIR_NAME && unzip $releaseDir/$releaseZipName.zip -d $unzipPath
+          unzipPath=$releaseDir/i$WORK_DIR_NAME && unzip $releaseDir/$releaseName.zip -d $unzipPath
           # 从 zip 包解压出来的文件路径
-          releaseZipFiles=$unzipPath/** && echo "::set-output name=releaseZipFiles::$releaseZipFiles" && echo "releaseZipFiles=$releaseZipFiles" >> $GITHUB_ENV
-          #ls $releaseZipFiles
-
+          releaseFiles=$unzipPath/** && echo "::set-output name=releaseFiles::$releaseFiles" && echo "releaseFiles=$releaseFiles" >> $GITHUB_ENV
+          #ls $releaseFiles
       - name: Upload release
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ steps.prepareUpload.outputs.releaseZipName }}
-          path: ${{ steps.prepareUpload.outputs.releaseZipFiles }}
+          name: ${{ steps.buildRelease.outputs.releaseName }}
+          path: ${{ steps.prepareUpload.outputs.releaseFiles }}
 
       - name: Send Message
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -133,9 +132,8 @@ jobs:
           # workflow 详情页面
           wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseZipName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
-          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedCore.$APPVEYOR_BUILD_NUMBER&desp=$desp$commitMsg"
-
+          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
+          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
       - name: Delete Canceled Workflow
         if: always()
         run: |
@@ -143,11 +141,9 @@ jobs:
           CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
           echo CANCELLED_IDS=$CANCELLED_IDS
           for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
-
       - name: Cancel or Delete Self if Skiped
         if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
         run: |
           # 删除一般不会成功,应该是因为无法删除正在运行的任务,加上取消 $GITHUB_RUN_ID 和 ${{ github.run_id }} 同一个值
-          curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X POST $GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel
+          curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X POST "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel"
           curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID"
-
