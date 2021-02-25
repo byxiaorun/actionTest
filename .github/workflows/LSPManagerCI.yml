@@ -16,54 +16,54 @@ env:
   MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
   # LSP giturl
   LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
-  # 管理器actions NAME
-  LSP_ACTION_NAME: 'Manager'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
   # github api 请求头的验证 token
   GIT_API_AUTH: 'token ${{ github.token }}'
-  # 获取所有 workflows API 地址
+  # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
   GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
   # 获取 lsp 官方仓库所有 workflow 的API地址
   GIT_API_RUNS_LIST_LSP: 'https://api.github.com/repos/LSPosed/LSPosed/actions/runs'
-  # 代码保存位置
+  # 代码保存位置文件夹名
   WORK_DIR_NAME: 'LSPosed'
   # 本仓库 commit message
   COMMIT_MESSAGE: '${{ github.event.head_commit.message }}'
+  # build 命令选项
+  BUILD_COMMAND: ':app:assembleRelease'
+  # 目标 actions NAME 只处理官方该action的信息
+  LSP_ACTION_NAME: 'Manager'
+  # server酱发送信息时的文件名前缀
+  SCEND_MSG_NAME: 'iLSPosedManager'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    #if: ${{ startsWith(github.event.head_commit.message, 'lspmanager') }}
     steps:
       - name: Get Latest CI Info
         id: ciInfo
         run: |
           # 获取 push 触发的最新一次构建事件
-          latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTHO'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='$LSP_ACTION_NAME'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
+          latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTH'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='$LSP_ACTION_NAME'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
           # 赋值到变量中
           eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
           echo latestCI=$latestCI && echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
           # run number 用来计算最新的 versionCode
-          APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
+          # 20210225 a7500c73f3043bc348d5be4004d7ac3b9bf1bd7a 开始，官方获取versionCode 的方式改为了 commitCount+4200
+          #APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
           # 最新一次构建的commit注释信息
           echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
           # 最近一次构建时间 与 当前时间 间隔
           TIME_INTERVAL=$(expr `date +%s` - `date -d $createTime +%s`)
-          # 1. commit信息以 forceManager 单词开头的(肯定是push)直接开始执行
-          # 2. LSP官方最近一次构建在1小时之内的
-          #   2.1 commit信息以 manager 单词开头的(肯定是push)执行
-          #   2.2 定时任务schedule触发的执行
+          # 1. 触发当前action的commit信息以 force 单词开头的(肯定是push)直接开始执行
+          # 2. 定时任务schedule触发的且LSP官方最近一次构建在1小时之内的
           echo COMMIT_MESSAGE=$COMMIT_MESSAGE
-          [[ $COMMIT_MESSAGE == forceManager* || ($TIME_INTERVAL -lt 3600 && ($COMMIT_MESSAGE == manager* || "$GITHUB_EVENT_NAME" == "schedule")) ]] && isRun=Y || isRun=N
+          [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") ]] && isRun=Y || isRun=N
           echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
-
       - name: Clone Code
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
-          git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
-
+          echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
       - name: set up JDK 1.8
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/setup-java@v1
@@ -82,23 +82,24 @@ jobs:
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
           # 输出文件名
           sed -i 's/outputFileName =.*/outputFileName = \"iLSPosedManager-${defaultConfig.versionName}-${rootProject.ext.versionCode}-${buildType.name}.apk\"/g' $WORK_DIR/app/build.gradle
-
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: buildRelease
         run: |
-          cd $WORK_DIR && bash $WORK_DIR/gradlew :app:assembleRelease
-          # apk 文件输出路径
-          releaseApkDir=$WORK_DIR/app/build/outputs/apk/release && echo "::set-output name=releaseApkDir::$releaseApkDir" && echo "releaseApkDir=$releaseApkDir" >> $GITHUB_ENV
-          # apk 输出文件名(无后缀)
-          releaseApkName=`cd $releaseApkDir && ls iLSPosed*.apk | awk -F '.apk' '{print $1}'` && echo "::set-output name=releaseApkName::$releaseApkName" && echo "releaseApkName=$releaseApkName" >> $GITHUB_ENV
-
+          cd $WORK_DIR && bash $WORK_DIR/gradlew $BUILD_COMMAND
+          # 编译产品文件输出路径
+          releaseDir=$WORK_DIR/app/build/outputs/apk/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
+          # 输出包文件名(无后缀)
+          releaseName=`cd $releaseDir && ls iLSPosed*.apk | awk -F '.apk' '{print $1}'` && echo "::set-output name=releaseName::$releaseName" && echo "releaseName=$releaseName" >> $GITHUB_ENV
+	  # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
+	  versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
+	  echo versionCode=$versionCode
       - name: Sign Manager Release
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: sign
         uses: LSPosed/sign-android-release@v1.0.0
         with:
-          releaseDirectory: ${{ steps.buildRelease.outputs.releaseApkDir }}
+          releaseDirectory: ${{ steps.buildRelease.outputs.releaseDir }}
           signingKeyBase64: ${{ secrets.SIGN_KEY_BASE64 }}
           alias: ${{ secrets.SIGN_KEY_ALIAS }}
           keyStorePassword: ${{ secrets.SIGN_KEY_STORE_PASS }}
@@ -106,11 +107,11 @@ jobs:
         env:
           BUILD_TOOLS_VERSION: "30.0.3"
 
-      - name: Upload signed apk
+      - name: Upload release
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ steps.buildRelease.outputs.releaseApkName }}
+          name: ${{ steps.buildRelease.outputs.releaseName }}
           path: ${{ steps.sign.outputs.signedReleaseFile }}
 
       - name: Send Message
@@ -125,20 +126,18 @@ jobs:
           # workflow 详情页面
           wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseApkName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
-          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=iLSPosedManager.$APPVEYOR_BUILD_NUMBER&desp=$desp$commitMsg"
-
+          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
+          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
       - name: Delete Canceled Workflow
+        if: always()
         run: |
           # 获取所有被取消的workflow run id
           CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
           echo CANCELLED_IDS=$CANCELLED_IDS
           for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
-
       - name: Cancel or Delete Self if Skiped
         if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
         run: |
           # 删除一般不会成功,应该是因为无法删除正在运行的任务,加上取消 $GITHUB_RUN_ID 和 ${{ github.run_id }} 同一个值
           curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X POST "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel"
           curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID"
-
