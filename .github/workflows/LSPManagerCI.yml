@@ -91,9 +91,9 @@ jobs:
           releaseDir=$WORK_DIR/app/build/outputs/apk/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
           # 输出包文件名(无后缀)
           releaseName=`cd $releaseDir && ls iLSPosed*.apk | awk -F '.apk' '{print $1}'` && echo "::set-output name=releaseName::$releaseName" && echo "releaseName=$releaseName" >> $GITHUB_ENV
-	  # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
-	  versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
-	  echo versionCode=$versionCode
+          # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
+          versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
+          echo versionCode=$versionCode
       - name: Sign Manager Release
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: sign
