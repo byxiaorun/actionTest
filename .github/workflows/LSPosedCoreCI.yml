@@ -47,7 +47,8 @@ jobs:
           eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
           echo latestCI=$latestCI && echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
           # run number 用来计算最新的 versionCode
-          APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
+          # 20210225 a7500c73f3043bc348d5be4004d7ac3b9bf1bd7a 开始，获取versionCode 的方式改为了 commitCount+4200
+          #APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
           # 最新一次构建的commit注释信息
           echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
           # 最近一次构建时间 与 当前时间 间隔
