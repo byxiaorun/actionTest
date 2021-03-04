@@ -77,11 +77,12 @@ jobs:
         run: |
           cd $WORK_DIR
           # 包名
-          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
           # Magisk文件 sha256 计算时不处理 .sha256 文件 本地编译时会出现循环计算所有文件(包括.sha256文件)sha256值直到文件名超长
-          sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
+          #sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
           # Magisk 模块包输出文件名
-          sed -i 's/def zipFileName =.*/def zipFileName = \"i${module_name}-${rootProject.ext.versionName}-core-${rootProject.ext.versionCode}-${variantLowered}.zip\"/g' $WORK_DIR/core/build.gradle
+          #sed -i 's/def zipFileName =.*/def zipFileName = \"i${module_name}-${rootProject.ext.versionName}-core-${rootProject.ext.versionCode}-${variantLowered}.zip\"/g' $WORK_DIR/core/build.gradle
+          sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
           # Magisk 安装脚本中修改包名 管理器配置保存位置
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/template_override/customize.sh
           # Core Hook 管理器修改激活状态、默认管理器包名 在 /data/misc/lsp_xxx/0/config/ 下新建 installer 文件,内容写入其他管理器包名后重启可修改默认的指定管理器
