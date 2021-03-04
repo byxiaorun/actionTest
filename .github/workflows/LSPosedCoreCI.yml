@@ -148,6 +148,10 @@ jobs:
           CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
           echo CANCELLED_IDS=$CANCELLED_IDS
           for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+          # 获取第20个往后的 workflow run id, 即只保存20个
+          OLD_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'][19]]; print(' '.join(ids))"`
+          echo OLD_IDS=$OLD_IDS
+          for id in `echo $OLD_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
 
       - name: Cancel or Delete Self if Skiped
         if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
