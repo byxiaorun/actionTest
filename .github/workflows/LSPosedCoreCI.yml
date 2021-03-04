@@ -93,6 +93,7 @@ jobs:
           sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
           sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
           #sed -i 's/Utils.logW("hookXposedInstaller:/Utils.logW(classLoader);Utils.logW("hookXposedInstaller:/g' $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
+
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: buildRelease
@@ -105,6 +106,7 @@ jobs:
           # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
           versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
           echo versionCode=$versionCode
+
       - name: Prepare for Upload
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: prepareUpload
@@ -114,6 +116,7 @@ jobs:
           # 从 zip 包解压出来的文件路径
           releaseFiles=$unzipPath/** && echo "::set-output name=releaseFiles::$releaseFiles" && echo "releaseFiles=$releaseFiles" >> $GITHUB_ENV
           #ls $releaseFiles
+
       - name: Upload release
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/upload-artifact@v2
@@ -135,6 +138,7 @@ jobs:
           # urlencode
           desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
           curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
+
       - name: Delete Canceled Workflow
         if: always()
         run: |
@@ -142,9 +146,11 @@ jobs:
           CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
           echo CANCELLED_IDS=$CANCELLED_IDS
           for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+
       - name: Cancel or Delete Self if Skiped
         if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
         run: |
           # 删除一般不会成功,应该是因为无法删除正在运行的任务,加上取消 $GITHUB_RUN_ID 和 ${{ github.run_id }} 同一个值
           curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X POST "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel"
           curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID"
+
