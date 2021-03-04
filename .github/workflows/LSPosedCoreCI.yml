@@ -61,16 +61,18 @@ jobs:
           echo COMMIT_MESSAGE=$COMMIT_MESSAGE
           [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") ]] && isRun=Y || isRun=N
           echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
+
       - name: Clone Code
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
           echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
-      - name: set up JDK 1.8
+
+      - name: set up JDK 11
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/setup-java@v1
         with:
-          java-version: 1.8
+          java-version: 11
 
       - name: Customize
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
