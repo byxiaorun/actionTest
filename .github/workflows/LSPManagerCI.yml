@@ -83,7 +83,8 @@ jobs:
           # shortcut 中的包名
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
           # 输出文件名
-          sed -i 's/outputFileName =.*/outputFileName = \"iLSPosedManager-${defaultConfig.versionName}-${rootProject.ext.versionCode}-${buildType.name}.apk\"/g' $WORK_DIR/app/build.gradle
+          #sed -i 's/outputFileName =.*/outputFileName = \"iLSPosedManager-${defaultConfig.versionName}-${rootProject.ext.versionCode}-${buildType.name}.apk\"/g' $WORK_DIR/app/build.gradle
+          sed -i 's/outputFileName = \"LSPosedManager/outputFileName = \"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: buildRelease
