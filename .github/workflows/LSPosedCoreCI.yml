@@ -6,6 +6,8 @@ on:
     paths:
     - 'lsp/core'
     - '.github/workflows/LSPosedCoreCI.yml'
+  gollum:
+  workflow_dispatch:
   schedule:
     - cron: '0 */1 * * *'
 
