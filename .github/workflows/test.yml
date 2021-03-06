@@ -41,7 +41,7 @@ jobs:
     steps:
       - name: test
         run: |
-          python3 -c "import requests"
+          python3 -c "import requests; print(requests)"
 #      - name: Get Latest CI Info
 #        run: |
 #          # 获取所有被取消的workflow run id
