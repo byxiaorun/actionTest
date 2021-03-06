@@ -3,7 +3,7 @@
 
 # 每天10:30执行
 
-name: Bili Task
+name: BiliTask
 
 on:
    push:
@@ -18,6 +18,12 @@ on:
 
 env:
   SAVE_DIR_NAME: 'BilibiliTask'
+  # github api 请求头的 accept
+  GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # github api 请求头的验证 token
+  GIT_API_AUTH: 'token ${{ github.token }}'
+  # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
+  GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
 
 jobs:
   start:
@@ -59,3 +65,15 @@ jobs:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
       run: cd $WORK_DIR && sh $WORK_DIR/gradlew runMain
+
+    - name: Delete Cancelled And Old Runs
+      run: |
+        # 获取所有被取消的workflow run id
+        CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
+        echo CANCELLED_IDS=$CANCELLED_IDS
+        for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+        # 当前workflow的记录保留5条
+        OLD_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['name']=='$GITHUB_WORKFLOW']; print(' '.join(ids[10:]))"`
+        echo OLD_IDS=$OLD_IDS
+        for id in `echo $OLD_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+
