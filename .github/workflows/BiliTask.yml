@@ -18,6 +18,7 @@ on:
 
 env:
   SAVE_DIR_NAME: 'BilibiliTask'
+  GIT_REPO_URL: 'https://github.com/srcrs/BilibiliTask.git'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
   # github api 请求头的验证 token
@@ -34,7 +35,7 @@ jobs:
     #- uses: actions/checkout@v2
     - name: Clone BilibiliTask
       run: |
-        git clone https://github.com/srcrs/BilibiliTask.git $SAVE_DIR_NAME
+        git clone $GIT_REPO_URL $SAVE_DIR_NAME
         WORK_DIR=$GITHUB_WORKSPACE/$SAVE_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
         confPath=$WORK_DIR/src/main/resources/config.yml
         # 修改每日投币数
