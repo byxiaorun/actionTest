@@ -6,6 +6,8 @@ on:
     paths:
     - 'lsp/manager'
     - '.github/workflows/LSPManagerCI.yml'
+  gollum:
+  workflow_dispatch:
   schedule:
     - cron: '0 */1 * * *'
 
