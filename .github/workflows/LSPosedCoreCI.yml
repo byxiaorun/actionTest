@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-    - 'lsp/core'
+    - 'task/lspcore'
     - '.github/workflows/LSPosedCoreCI.yml'
   gollum:
   workflow_dispatch:
