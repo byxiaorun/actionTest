@@ -31,6 +31,8 @@ env:
   WORK_DIR_NAME: 'LSPosed'
   # 本仓库 commit message
   COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+  GIT_API_TOKEN: '${{ github.token }}'
+  GIT_TOOL_PY: 'https://github.com/inused/actionTest/raw/main/tool/deleteOldRuns.py'
 
 jobs:
   build:
@@ -42,6 +44,7 @@ jobs:
       - name: test
         run: |
           python3 -c "import requests; print(requests)"
+          wget $GIT_TOOL_PY -o tool.py && python3 tool.py
 #      - name: Get Latest CI Info
 #        run: |
 #          # 获取所有被取消的workflow run id
