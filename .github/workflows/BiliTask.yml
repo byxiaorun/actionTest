@@ -30,6 +30,10 @@ jobs:
       run: |
         git clone https://github.com/srcrs/BilibiliTask.git $SAVE_DIR_NAME
         WORK_DIR=$GITHUB_WORKSPACE/$SAVE_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
+        confPath=$WORK_DIR/src/main/resources/config.yml
+        # 修改每日投币数
+        sed -i 's/coin:.*/coin: 0/g' $confPath
+        echo '------当前配置信息如下:' && cat $confPath
 
     - name: Set up JDK 1.8
       uses: actions/setup-java@v1
