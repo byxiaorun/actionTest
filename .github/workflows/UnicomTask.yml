@@ -1,0 +1,57 @@
+name: UnicomTask
+
+on:
+  push:
+    branches: main
+    paths:
+    - 'task/unicom'
+    - '.github/workflows/UnicomTask.yml'
+  gollum:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 23 * * *'
+
+env:
+  SAVE_DIR_NAME: 'UnicomTask'
+  GIT_REPO_URL: 'https://github.com/srcrs/UnicomTask.git'
+  # github api 请求头的 accept
+  GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # github api 请求头的验证 token
+  GIT_API_AUTH: 'token ${{ github.token }}'
+  # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
+  GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    #- uses: actions/checkout@v2
+    - name: Clone BilibiliTask
+      run: |
+        git clone $GIT_REPO_URL $SAVE_DIR_NAME
+        WORK_DIR=$GITHUB_WORKSPACE/$SAVE_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/run_in_Actions/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        pip install -r $WORK_DIR/requirements.txt
+
+    - name: Build and publish
+      env:
+        USERS_COVER: ${{ secrets.UNICOM_USERS_COVER }}
+      run: |
+        cd $WORK_DIR && echo "$USERS_COVER" > $WORK_DIR/config.json
+        python $WORK_DIR/main.py
