@@ -5,6 +5,8 @@ on:
     branches: [ main ]
     paths:
       - '.github/workflows/test.yml'
+  gollum:
+  workflow_dispatch:
   #schedule:
   #  - cron: '*/1 * * * *'
 
@@ -37,13 +39,16 @@ jobs:
     outputs:
       buileOutput: ${{ steps.test1.output.aaa }}
     steps:
-      - name: Get Latest CI Info
+      - name: test
         run: |
-          # 获取所有被取消的workflow run id
-          CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='failure']; print(' '.join(ids))"`
-          echo CANCELLED_IDS=$CANCELLED_IDS
-          for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
-          #python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode()); print(flows)"
+          python3 -c "import requests"
+#      - name: Get Latest CI Info
+#        run: |
+#          # 获取所有被取消的workflow run id
+#          CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='failure']; print(' '.join(ids))"`
+#          echo CANCELLED_IDS=$CANCELLED_IDS
+#          for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+#          #python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode()); print(flows)"
 #      - name: upload
 #        uses: actions/upload-artifact@v2
 #        with:
