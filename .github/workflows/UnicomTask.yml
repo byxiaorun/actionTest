@@ -54,7 +54,10 @@ jobs:
         USERS_COVER: ${{ secrets.UNICOM_USERS_COVER }}
       run: |
         cd $WORK_DIR && echo "$USERS_COVER" > $WORK_DIR/config.json
-        python $WORK_DIR/main.py
+        # 随机延时 30~60 分钟
+        sleepSeconds=$((RANDOM % 1800 + 1800)) && doTime=`date -d "+$sleepSeconds second" "+%Y-%m-%d %H:%M:%S"`
+        echo "等待 $sleepSeconds 秒后的 $doTime 开始执行" && sleep "$sleepSeconds"s
+        cd $WORK_DIR && python $WORK_DIR/main.py
 
     - name: Delete Cancelled And Old Runs
       run: |
