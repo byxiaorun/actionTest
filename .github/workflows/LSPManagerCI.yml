@@ -76,6 +76,7 @@ jobs:
 
       - name: Write key
         run: |
+          # 改为使用 gradle 签名
           cd $WORK_DIR
           echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> gradle.properties
           echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> gradle.properties
@@ -131,6 +132,7 @@ jobs:
         with:
           name: ${{ steps.buildRelease.outputs.releaseName }}
           #path: ${{ steps.sign.outputs.signedReleaseFile }}
+          # 改为了使用 gradle 签名
           path: "${{ steps.buildRelease.outputs.releaseDir }}/*.apk"
 
       - name: Send Message
