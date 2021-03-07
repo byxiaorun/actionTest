@@ -78,8 +78,8 @@ jobs:
         run: |
           cd $WORK_DIR
           echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> gradle.properties
-          echo androidKeyAlias='${{ secrets.SIGN_KEY_PASS }}' >> gradle.properties
-          echo androidKeyPassword='${{ secrets.KEY_PASSWORD }}' >> gradle.properties
+          echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> gradle.properties
+          echo androidKeyPassword='${{ secrets.SIGN_KEY_PASS }}' >> gradle.properties
           echo androidStoreFile='key.jks' >> gradle.properties
           echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
 
