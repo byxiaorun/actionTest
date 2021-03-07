@@ -43,8 +43,13 @@ jobs:
     steps:
       - name: test
         run: |
+          date "+%Y-%m-%d %H:%M:%S"
+          sleepSeconds=5 && doTime=`date -d "+$sleepSeconds second" "+%Y-%m-%d %H:%M:%S"`
+          date "+%Y-%m-%d %H:%M:%S"
+          echo "等待 $sleepSeconds 秒后的 $doTime 开始执行"
+          cd $WORK_DIR && sleep "$sleepSeconds"s && sh $WORK_DIR/gradlew runMain
           #python3 -c "import requests; print(requests)"
-          wget $GIT_TOOL_PY -o tool.py && python3 tool.py
+          #wget $GIT_TOOL_PY -o tool.py && python3 tool.py
 #      - name: Get Latest CI Info
 #        run: |
 #          # 获取所有被取消的workflow run id
