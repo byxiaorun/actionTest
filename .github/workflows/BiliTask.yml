@@ -65,7 +65,11 @@ jobs:
         SENDKEY: ${{ secrets.SENDKEY }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      run: cd $WORK_DIR && sh $WORK_DIR/gradlew runMain
+      run: |
+        # 随机延时 30~60 分钟
+        sleepSeconds=$((RANDOM % 1800 + 1800)) && doTime=`date -d "+$sleepSeconds second" "+%Y-%m-%d %H:%M:%S"`
+        echo "等待 $sleepSeconds 秒后的 $doTime 开始执行"
+        cd $WORK_DIR && sleep "$sleepSeconds"s && sh $WORK_DIR/gradlew runMain
 
     - name: Delete Cancelled And Old Runs
       run: |
