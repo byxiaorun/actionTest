@@ -27,7 +27,7 @@ class GitActionCleaner():
     def getCancelledIds(self):
         """删除所有取消状态的 workflow run 记录"""
         cancelledIds = []
-        l = len(runIds) - 1
+        l = len(self.runs) - 1
         for i in range(l, -1, -1):
             run = self.runs[i]
             if run['conclusion'] == 'cancelled':
@@ -45,7 +45,7 @@ class GitActionCleaner():
             if run['name'] == self.wfName:
                 oldIds.append(run['id'])
         print('删除比较老的记录:', oldIds)
-        return oldIds
+        return oldIds[self.savedNum:]
 
     def delRun(self, runIds):
         """通过id删除运行记录"""
@@ -67,7 +67,7 @@ class GitActionCleaner():
         # 当前flow的名字
         self.wfName = self.args.wfName
         # 保留的记录数量
-        self.savedName = self.args.savedNum
+        self.savedNum = self.args.savedNum
         # API 地址
         self.gitApi = f'https://api.github.com/repos/{self.args.gitRepo}/actions/runs'
         # 请求头
