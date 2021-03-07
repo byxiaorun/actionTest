@@ -43,8 +43,8 @@ jobs:
     steps:
       - name: test
         run: |
-          python3 -c "import requests; print(requests)"
-          wget $GIT_TOOL_PY -o tool.py && python3 tool.py
+          #python3 -c "import requests; print(requests)"
+          wget $GIT_TOOL_PY -o tool.py && dos2unix tool.py && python3 tool.py
 #      - name: Get Latest CI Info
 #        run: |
 #          # 获取所有被取消的workflow run id
