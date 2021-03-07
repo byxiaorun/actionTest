@@ -74,10 +74,21 @@ jobs:
         with:
           java-version: 11
 
+      - name: Write key
+        run: |
+          cd $WORK_DIR
+          echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> gradle.properties
+          echo androidKeyAlias='${{ secrets.SIGN_KEY_PASS }}' >> gradle.properties
+          echo androidKeyPassword='${{ secrets.KEY_PASSWORD }}' >> gradle.properties
+          echo androidStoreFile='key.jks' >> gradle.properties
+          echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
+
       - name: Customize
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           cd $WORK_DIR
+          # 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
           # 包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
           # APP 显示名 2020-02-29 commit d5e20bb1c92e1db57064c708b3d25029b9014eca 官方将 "LSPosed Manager" 改为 "LSPosed"
@@ -101,25 +112,26 @@ jobs:
           versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
           echo versionCode=$versionCode
 
-      - name: Sign Manager Release
-        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
-        id: sign
-        uses: LSPosed/sign-android-release@v1.0.0
-        with:
-          releaseDirectory: ${{ steps.buildRelease.outputs.releaseDir }}
-          signingKeyBase64: ${{ secrets.SIGN_KEY_BASE64 }}
-          alias: ${{ secrets.SIGN_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.SIGN_KEY_STORE_PASS }}
-          keyPassword: ${{ secrets.SIGN_KEY_PASS }}
-        env:
-          BUILD_TOOLS_VERSION: "30.0.3"
+#      - name: Sign Manager Release
+#        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+#        id: sign
+#        uses: LSPosed/sign-android-release@v1.0.0
+#        with:
+#          releaseDirectory: ${{ steps.buildRelease.outputs.releaseDir }}
+#          signingKeyBase64: ${{ secrets.SIGN_KEY_BASE64 }}
+#          alias: ${{ secrets.SIGN_KEY_ALIAS }}
+#          keyStorePassword: ${{ secrets.SIGN_KEY_STORE_PASS }}
+#          keyPassword: ${{ secrets.SIGN_KEY_PASS }}
+#        env:
+#          BUILD_TOOLS_VERSION: "30.0.3"
 
       - name: Upload release
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/upload-artifact@v2
         with:
           name: ${{ steps.buildRelease.outputs.releaseName }}
-          path: ${{ steps.sign.outputs.signedReleaseFile }}
+          #path: ${{ steps.sign.outputs.signedReleaseFile }}
+          path: "$WORK_DIR/app/build/outputs/apk/release/*.apk"
 
       - name: Send Message
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
