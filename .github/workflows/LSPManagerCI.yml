@@ -131,7 +131,7 @@ jobs:
         with:
           name: ${{ steps.buildRelease.outputs.releaseName }}
           #path: ${{ steps.sign.outputs.signedReleaseFile }}
-          path: "$WORK_DIR/app/build/outputs/apk/release/*.apk"
+          path: "${{ steps.buildRelease.outputs.releaseDir }}/*.apk"
 
       - name: Send Message
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
