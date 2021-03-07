@@ -21,6 +21,7 @@ env:
   LSP_ACTION_NAME: 'Manager'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  GIT_API_TOKEN: '${{ github.token }}'
   # github api 请求头的验证 token
   GIT_API_AUTH: 'token ${{ github.token }}'
   # 获取所有 workflows API 地址
@@ -31,7 +32,6 @@ env:
   WORK_DIR_NAME: 'LSPosed'
   # 本仓库 commit message
   COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-  GIT_API_TOKEN: '${{ github.token }}'
   GIT_TOOL_PY: 'https://github.com/inused/actionTest/raw/main/tool/deleteOldRuns.py'
 
 jobs:
