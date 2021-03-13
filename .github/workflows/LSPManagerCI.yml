@@ -15,7 +15,7 @@ env:
   # 新包名
   MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
   # 老包名
-  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
+  MANAGER_PACKAGE_NAME_OLD: 'org.lsposed.manager'
   # LSP giturl
   LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
   # github api 请求头的 accept
@@ -84,20 +84,30 @@ jobs:
           echo androidStoreFile='key.jks' >> gradle.properties
           echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
 
+      - name: Cache Gradle
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-manager-${{ hashFiles('**/*.gradle.kts') }}
+          restore-keys: |
+            gradle-core-${{ hashFiles('**/*.gradle.kts') }}
+            gradle-manager
+            gradle-
+
       - name: Customize
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           cd $WORK_DIR
-          # 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
+          # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
-          # 包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
-          # APP 显示名 2020-02-29 commit d5e20bb1c92e1db57064c708b3d25029b9014eca 官方将 "LSPosed Manager" 改为 "LSPosed"
-          sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
           # shortcut 中的包名
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
+          # APP 显示名
+          sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
           # 输出文件名
-          #sed -i 's/outputFileName =.*/outputFileName = \"iLSPosedManager-${defaultConfig.versionName}-${rootProject.ext.versionCode}-${buildType.name}.apk\"/g' $WORK_DIR/app/build.gradle
           sed -i 's/outputFileName = \"LSPosedManager/outputFileName = \"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
 
       - name: Build with Gradle
