@@ -58,7 +58,7 @@ class GitActionCleaner():
                 cancelledIds.append(run['id'])
                 # 从列表中删除
                 self.runs.remove(run)
-        print('删除已经取消的记录:', cancelledIds)
+        print('删除已经取消的run:', cancelledIds)
         return cancelledIds
 
     def getOldIds(self):
@@ -68,14 +68,13 @@ class GitActionCleaner():
             if run['name'] == self.wfName:
                 oldIds.append(run['id'])
         oldIds = oldIds[self.savedNum:]
-        print('删除比较老的记录:', oldIds)
+        print('删除比较老的run:', oldIds)
         return oldIds
 
     def delRun(self, runIds):
         """通过id删除运行记录"""
         for runId in runIds:
             res = self.httpSession.delete(f"{self.gitApi}/{runId}")
-            print(res.headers)
             print(res.text)
 
     def getAllRuns(self):
