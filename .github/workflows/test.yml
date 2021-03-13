@@ -21,7 +21,7 @@ env:
   LSP_ACTION_NAME: 'Manager'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
-  #GIT_API_TOKEN: '${{ github.token }}'
+  GIT_API_TOKEN: '${{ github.token }}'
   # github api 请求头的验证 token
   #GIT_API_AUTH: 'token ${{ github.token }}'
   # 获取所有 workflows API 地址
