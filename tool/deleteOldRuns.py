@@ -17,8 +17,7 @@ class GitActionCleaner():
         # GitHub API Token
         self.gitToken = os.environ['GIT_API_TOKEN']
         # 保留的记录数量 默认10
-        savedNum = os.environ['recordSavedNum'] if ('recordSavedNum' in os.environ) else 10
-        self.savedNum = int(savedNum) - 1
+        savedNum = int(os.environ['recordSavedNum']) if ('recordSavedNum' in os.environ) else 10
         # 当前 workflow run 的名字
         self.wfName = os.environ['GITHUB_WORKFLOW']
         # 当前 action 的 '用户名/仓库名' 如 inused/actionTest
