@@ -74,7 +74,7 @@ jobs:
           echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
           echo "GITHUB_WORKSPACE=$WORK_DIR" >> $GITHUB_ENV
 
-      - name: set up JDK 11
+      - name: Set up JDK 11
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/setup-java@v1
         with:
