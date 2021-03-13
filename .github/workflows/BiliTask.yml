@@ -37,6 +37,7 @@ jobs:
       run: |
         git clone $GIT_REPO_URL $SAVE_DIR_NAME
         WORK_DIR=$GITHUB_WORKSPACE/$SAVE_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
+        echo "GITHUB_WORKSPACE=$WORK_DIR" >> $GITHUB_ENV
         confPath=$WORK_DIR/src/main/resources/config.yml
         # 修改每日投币数
         sed -i 's/coin:.*/coin: 0/g' $confPath
