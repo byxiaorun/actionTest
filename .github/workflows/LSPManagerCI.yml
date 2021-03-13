@@ -36,6 +36,7 @@ env:
   LSP_ACTION_NAME: 'Manager'
   # server酱发送信息时的文件名前缀
   SCEND_MSG_NAME: 'iLSPosedManager'
+  deleteOldRunsUrl: 'https://github.com/inused/actionTest/raw/main/tool/deleteOldRuns.py'
 
 jobs:
   build:
@@ -69,7 +70,7 @@ jobs:
           echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
           echo "GITHUB_WORKSPACE=$WORK_DIR" >> $GITHUB_ENV
 
-      - name: set up JDK 11
+      - name: Set up JDK 11
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/setup-java@v1
         with:
@@ -163,17 +164,9 @@ jobs:
           desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
           curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
 
-      - name: Delete Canceled Workflow
+      - name: Delete Canceled and Old Workflow
         if: always()
-        run: |
-          # 获取所有被取消的workflow run id
-          CANCELLED_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['conclusion']=='cancelled']; print(' '.join(ids))"`
-          echo CANCELLED_IDS=$CANCELLED_IDS
-          for id in `echo $CANCELLED_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
-          # 只保存10个
-          OLD_IDS=`python3 -c "import json,urllib.request as rq; header={'Accept':'$GIT_API_ACCEPT','Authorization': '$GIT_API_AUTH'}; req=rq.Request('$GIT_API_RUNS_LIST',headers=header); res=rq.urlopen(req).read(); flows=json.loads(res.decode());ids=[str(flow['id']) for flow in flows['workflow_runs'] if flow['name']=='$GITHUB_WORKFLOW']; print(' '.join(ids[10:]))"`
-          echo OLD_IDS=$OLD_IDS
-          for id in `echo $OLD_IDS`; do curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$id"; done
+        run: wget $deleteOldRunsUrl -q -O deleteOldRuns.py && python3 deleteOldRuns.py
 
       - name: Cancel or Delete Self if Skiped
         if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
