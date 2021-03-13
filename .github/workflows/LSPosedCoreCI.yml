@@ -15,7 +15,7 @@ env:
   # 新包名
   MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
   # 老包名
-  MANAGER_PACKAGE_NAME_OLD: 'io.github.lsposed.manager'
+  MANAGER_PACKAGE_NAME_OLD: 'org.lsposed.manager'
   # LSP giturl
   LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
   # github api 请求头的 accept
@@ -85,30 +85,47 @@ jobs:
           echo androidStoreFile='key.jks' >> gradle.properties
           echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
 
+      - name: Cache Gradle
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-core-${{ hashFiles('**/*.gradle.kts') }}
+          restore-keys: |
+            gradle-manager-${{ hashFiles('**/*.gradle.kts') }}
+            gradle-core
+            gradle-
+
+      - name: Cache Cmake
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ccache-${{ hashFiles('core/src/main/cpp') }}
+          restore-keys: ccache-
+
+      - name: Install ccache
+        run: sudo apt-get install -y ccache
+
       - name: Customize
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           cd $WORK_DIR
-          # 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
+          # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
-          # 包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
+          # shortcut 中的包名
+          sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
+          # APP 显示名
+          sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
+          sed -i "s/io.github.lsposed.lspd/org.lsposed.lspd/g" $WORK_DIR/core/build.gradle.kts
+          # Magisk 模块包输出文件名
+          sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
+          # Core 校验管理器签名 新增一条
+          sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
+          sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
           # Magisk文件 sha256 计算时不处理 .sha256 文件 本地编译时会出现循环计算所有文件(包括.sha256文件)sha256值直到文件名超长
           #sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
-          # Magisk 模块包输出文件名
-          #sed -i 's/def zipFileName =.*/def zipFileName = \"i${module_name}-${rootProject.ext.versionName}-core-${rootProject.ext.versionCode}-${variantLowered}.zip\"/g' $WORK_DIR/core/build.gradle
-          sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
-          # Magisk 安装脚本中修改包名 管理器配置保存位置
-          # cc6155b496bd75570e435c042ee595b64cfae859 开始删除了配置文件复制, 在之前的更新中已经将配置写入了sqlite中
-          #sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/template_override/customize.sh
-          # Core Hook 管理器修改激活状态、默认管理器包名 在 /data/misc/lsp_xxx/0/config/ 下新建 installer 文件,内容写入其他管理器包名后重启可修改默认的指定管理器
-          # commit 374c8cac116cd5077780f0ea9c11e596e957a362 删除了该文件 改为其他hook方式
-          #sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/src/main/cpp/main/src/config_manager.h
-          sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/service/ConfigManager.java
-          # Core 校验管理器签名 新增一条
-          sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
-          sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
-          #sed -i 's/Utils.logW("hookXposedInstaller:/Utils.logW(classLoader);Utils.logW("hookXposedInstaller:/g' $WORK_DIR/core/src/main/java/io/github/lsposed/lspd/util/InstallerVerifier.java
 
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
