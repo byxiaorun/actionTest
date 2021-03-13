@@ -32,6 +32,7 @@ jobs:
       run: |
         git clone $GIT_REPO_URL $SAVE_DIR_NAME
         WORK_DIR=$GITHUB_WORKSPACE/$SAVE_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
+        echo "GITHUB_WORKSPACE=$WORK_DIR" >> $GITHUB_ENV
 
     - name: Set up Python
       uses: actions/setup-python@v2
