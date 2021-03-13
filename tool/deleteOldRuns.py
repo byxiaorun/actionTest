@@ -38,7 +38,7 @@ class GitActionCleaner():
         except KeyError as e:
             self.help()
             e = str(e).strip("'")
-            print(f'\n----------需要设置环境变量 {e}: {self.envInfo[e]}\n----------')
+            print(f'----------\n需要设置环境变量 {e}: {self.envInfo[e]}\n----------')
             os._exit(0)
         # 获取所有运行记录
         self.getAllRuns()
