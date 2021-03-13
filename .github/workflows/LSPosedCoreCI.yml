@@ -69,6 +69,7 @@ jobs:
         run: |
           WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
           echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
+          echo "GITHUB_WORKSPACE=$WORK_DIR" >> $GITHUB_ENV
 
       - name: set up JDK 11
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -78,12 +79,11 @@ jobs:
 
       - name: Write key
         run: |
-          cd $WORK_DIR
-          echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> gradle.properties
-          echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> gradle.properties
-          echo androidKeyPassword='${{ secrets.SIGN_KEY_PASS }}' >> gradle.properties
-          echo androidStoreFile='key.jks' >> gradle.properties
-          echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
+          echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> $WORK_DIR/gradle.properties
+          echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> $WORK_DIR/gradle.properties
+          echo androidKeyPassword='${{ secrets.SIGN_KEY_PASS }}' >> $WORK_DIR/gradle.properties
+          echo androidStoreFile='key.jks' >> $WORK_DIR/gradle.properties
+          echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > $WORK_DIR/key.jks
 
       - name: Cache Gradle
         uses: actions/cache@v2
@@ -110,7 +110,6 @@ jobs:
       - name: Customize
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
-          cd $WORK_DIR
           # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
