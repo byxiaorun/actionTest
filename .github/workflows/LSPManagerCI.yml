@@ -67,6 +67,7 @@ jobs:
         run: |
           WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
           echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
+          echo "GITHUB_WORKSPACE=$WORK_DIR" >> $GITHUB_ENV
 
       - name: set up JDK 11
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -85,7 +86,6 @@ jobs:
           echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
 
       - name: Cache Gradle
-        run: cd $WORK_DIR
         uses: actions/cache@v2
         with:
           path: |
