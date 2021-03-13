@@ -85,6 +85,7 @@ jobs:
           echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
 
       - name: Cache Gradle
+        run: cd $WORK_DIR
         uses: actions/cache@v2
         with:
           path: |
