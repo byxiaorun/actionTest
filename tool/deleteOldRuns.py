@@ -24,7 +24,7 @@ class GitActionCleaner():
         # 当前 action 的 '用户名/仓库名' 如 inused/actionTest
         self.gitRepo = os.environ['GITHUB_REPOSITORY']
         # API 地址
-        self.gitApi = f'https://api.github.com/repos/{self.args.gitRepo}/actions/runs'
+        self.gitApi = f'https://api.github.com/repos/{self.gitRepo}/actions/runs'
         # GitHub API 请求头 Accept
         self.headerAccept = 'application/vnd.github.v3+json'
         # 请求头
