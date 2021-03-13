@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
-import os,sys
+import os
 import requests
 
 class GitActionCleaner():
@@ -39,7 +39,7 @@ class GitActionCleaner():
             self.help()
             e = str(e).strip("'")
             print(f'----------\n需要设置环境变量 {e}: {self.envInfo[e]}\n----------')
-            sys.exit(0)
+            raise KeyError()
         # 获取所有运行记录
         self.getAllRuns()
         # 删除已取消
@@ -93,4 +93,9 @@ class GitActionCleaner():
         print(f'  * recordSavedNum: {self.envInfo["recordSavedNum"]}\n')
 
 if __name__ == '__main__':
-    GitActionCleaner().main()
+    try:
+        GitActionCleaner().main()
+    except KeyError as e:
+        pass
+    except Exception as e:
+        print(e)
