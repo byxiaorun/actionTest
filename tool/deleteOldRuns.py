@@ -39,7 +39,7 @@ class GitActionCleaner():
             self.help()
             e = str(e).strip("'")
             print(f'\n----------需要设置环境变量 {e}: {self.envInfo[e]}\n----------')
-            os._exit()
+            os._exit(0)
         # 获取所有运行记录
         self.getAllRuns()
         # 删除已取消
