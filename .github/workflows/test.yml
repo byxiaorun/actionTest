@@ -48,7 +48,9 @@ jobs:
           #sleep 5s
           #date "+%Y-%m-%d %H:%M:%S"
           #python3 -c "import requests; print(requests)"
-          wget $GIT_TOOL_PY -o tool.py && cat tool.py && python3 tool.py
+          wget $GIT_TOOL_PY -o tool.py
+          ls -la tool.py && cat tool.py
+          #python3 tool.py
 #      - name: Get Latest CI Info
 #        run: |
 #          # 获取所有被取消的workflow run id
