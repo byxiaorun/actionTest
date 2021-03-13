@@ -20,6 +20,8 @@ env:
   LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # github api token
+  GIT_API_TOKEN: ${{ github.token }}
   # github api 请求头的验证 token
   GIT_API_AUTH: 'token ${{ github.token }}'
   # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
