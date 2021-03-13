@@ -48,10 +48,7 @@ jobs:
           #sleep 5s
           #date "+%Y-%m-%d %H:%M:%S"
           #python3 -c "import requests; print(requests)"
-          wget $GIT_TOOL_PY -O deleteOldRuns.py -q
-          ls -la deleteOldRuns.py
-          #cat deleteOldRuns.py
-          python3 deleteOldRuns.py
+          wget $GIT_TOOL_PY -q -O deleteOldRuns.py && python3 deleteOldRuns.py
 #      - name: Get Latest CI Info
 #        run: |
 #          # 获取所有被取消的workflow run id
