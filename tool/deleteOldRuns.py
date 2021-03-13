@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import os
+import sys
 import json
 import requests
 from argparse import ArgumentParser
@@ -8,13 +9,28 @@ from argparse import ArgumentParser
 
 class GitActionCleaner():
     def __init__(self):
-        # 某个 workflow run 记录保留多少个
-        self.savedNumDefault = 10
+        # 当前脚本真实路径
+        self.curPath = os.path.realpath(__file__)
+        # 当前脚本所在文件夹
+        self.curDir = os.path.dirname(self.curPath)
+        # 当前脚本文件名
+        self.curName = os.path.basename(self.curPath)
+        # GitHub API Token
+        self.gitToken = os.environ['GIT_API_TOKEN']
+        # 保留的记录数量 默认10
+        self.savedNum = os.environ['recordSavedNum'] if ('recordSavedNum' in os.environ) else 10
+        # 当前 workflow run 的名字
+        self.wfName = os.environ['GITHUB_WORKFLOW']
+        # 当前 action 的 '用户名/仓库名' 如 inused/actionTest
+        self.gitRepo = os.environ['GITHUB_REPOSITORY']
+        # API 地址
+        self.gitApi = f'https://api.github.com/repos/{self.args.gitRepo}/actions/runs'
         # GitHub API 请求头 Accept
         self.headerAccept = 'application/vnd.github.v3+json'
+        # 请求头
+        self.header = {'Accept': self.headerAccept, 'Authorization': f'token {self.gitToken}'}
         self.httpSession = requests.session()
-        # 初始化参数
-        self.initEnv()
+        self.httpSession.headers.update(self.header)
 
     def main(self):
         # 获取所有运行记录
@@ -50,7 +66,7 @@ class GitActionCleaner():
     def delRun(self, runIds):
         """通过id删除运行记录"""
         for runId in runIds:
-            res = self.httpSession.delete(f'{self.gitApi}/{runId}')
+            res = self.httpSession.delete(f"{self.gitApi}/{runId}")
             print(res.text)
 
     def getAllRuns(self):
@@ -58,32 +74,8 @@ class GitActionCleaner():
         runs = self.httpSession.get(f"{self.gitApi}?per_page=100")
         self.runs = runs.json()['workflow_runs']
 
-    def initEnv(self):
-        """初始化所需数据"""
-        # 提取输入参数
-        self.args = self.getArgs()
-        # GitHub token
-        self.gitToken = self.args.gitToken
-        # 当前flow的名字
-        self.wfName = self.args.wfName
-        # 保留的记录数量
-        self.savedNum = self.args.savedNum
-        # API 地址
-        self.gitApi = f'https://api.github.com/repos/{self.args.gitRepo}/actions/runs'
-        # 请求头
-        header = {'Accept': self.headerAccept, 'Authorization': f'token {self.gitToken}'}
-        self.httpSession.headers.update(header)
-
-    def getArgs(self):
-        """解析脚本调用入参
-        ---------------------------------------------
-            返回 argparse.ArgumentParser.parse_args() 格式的所有参数信息 """
-        parser = ArgumentParser(description='用于删除指定名字的workflow过早的运行记录')
-        parser.add_argument('-wn', dest='wfName', metavar='workflow name', type=str, default=os.environ['GITHUB_WORKFLOW'], help='将要处理的workflow名字, 必需, 若不从调用中传入则从环境变量 GITHUB_WORKFLOW 中提取')
-        parser.add_argument('-gt', dest='gitToken', metavar='github token', type=str, default=os.environ['GIT_API_TOKEN'], help='GitHub API Token, 必需, 若不从调用中传入则从环境变量 GIT_API_TOKEN 中提取')
-        parser.add_argument('-gp', dest='gitRepo', metavar='github repository path', type=str, default=os.environ['GITHUB_REPOSITORY'], help='要删除action的用户名/仓库名 如inused/actionTest, 若不传入则从环境变量 GITHUB_REPOSITORY 提取')
-        parser.add_argument('-sn', dest='savedNum', metavar='saved workflow number', type=int, default=self.savedNumDefault, help=f'某个 workflow run 记录保留多少个,默认 {self.savedNumDefault}')
-        return parser.parse_args()
-
 if __name__ == '__main__':
-    GitActionCleaner().main()
+    try:
+        GitActionCleaner().main()
+    except KeyError as e:
+        print(f'\n需要设置环境变量 {e},或者给出对应的参数')
