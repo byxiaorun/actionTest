@@ -21,6 +21,8 @@ env:
   GIT_REPO_URL: 'https://github.com/srcrs/BilibiliTask.git'
   # github api 请求头的 accept
   GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # github api token
+  GIT_API_TOKEN: ${{ github.token }}
   # github api 请求头的验证 token
   GIT_API_AUTH: 'token ${{ github.token }}'
   # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
@@ -75,6 +77,6 @@ jobs:
 
     - name: Delete Cancelled And Old Runs
       run: |
-        echo "recordSavedNum=5" >> $GITHUB_ENV
+        echo "recordSavedNum=6" >> $GITHUB_ENV
         wget $deleteOldRunsUrl -q -O deleteOldRuns.py && python3 deleteOldRuns.py
 
