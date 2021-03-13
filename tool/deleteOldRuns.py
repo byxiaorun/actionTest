@@ -33,7 +33,11 @@ class GitActionCleaner():
         self.httpSession.headers.update(self.header)
 
     def main(self):
-        self.initArgs()
+        try:
+            self.initArgs()
+        except KeyError as e:
+            self.help()
+            print(f'\n需要设置环境变量 {e}: {self.envInfo[str(e)]}')
         # 获取所有运行记录
         self.getAllRuns()
         # 删除已取消
@@ -87,9 +91,4 @@ class GitActionCleaner():
         print(f'  * recordSavedNum: {self.envInfo["recordSavedNum"]}\n')
 
 if __name__ == '__main__':
-    a = GitActionCleaner()
-    try:
-        a.main()
-    except KeyError as e:
-        a.help()
-        print(f'\n需要设置环境变量 {e}: {self.envInfo[str(e)]}')
+    a = GitActionCleaner().main()
