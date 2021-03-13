@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import os
-import sys
-import json
 import requests
-from argparse import ArgumentParser
-
 
 class GitActionCleaner():
+
     def __init__(self):
-        # 当前脚本真实路径
-        self.curPath = os.path.realpath(__file__)
-        # 当前脚本所在文件夹
-        self.curDir = os.path.dirname(self.curPath)
-        # 当前脚本文件名
-        self.curName = os.path.basename(self.curPath)
+        self.envInfo = {
+            'GITHUB_REPOSITORY': '当前仓库的路径 "用户名/仓库名", action中已经预设',
+            'GITHUB_WORKFLOW': '当前 workflow 名字, action中已经预设',
+            'GIT_API_TOKEN': 'GitHub API token, action中可以使用 ${{ github.token }} 获取,也可自行申请',
+            'recordSavedNum': '删除交老的记录时保留多少个, 默认10个'
+        }
+
+    def initArgs(self):
         # GitHub API Token
         self.gitToken = os.environ['GIT_API_TOKEN']
         # 保留的记录数量 默认10
-        self.savedNum = os.environ['recordSavedNum'] if ('recordSavedNum' in os.environ) else 10
+        savedNum = os.environ['recordSavedNum'] if ('recordSavedNum' in os.environ) else 10
+        self.savedNum = int(savedNum) - 1
         # 当前 workflow run 的名字
         self.wfName = os.environ['GITHUB_WORKFLOW']
         # 当前 action 的 '用户名/仓库名' 如 inused/actionTest
@@ -33,6 +33,7 @@ class GitActionCleaner():
         self.httpSession.headers.update(self.header)
 
     def main(self):
+        self.initArgs()
         # 获取所有运行记录
         self.getAllRuns()
         # 删除已取消
@@ -60,13 +61,15 @@ class GitActionCleaner():
         for run in self.runs:
             if run['name'] == self.wfName:
                 oldIds.append(run['id'])
+        oldIds = oldIds[self.savedNum:]
         print('删除比较老的记录:', oldIds)
-        return oldIds[self.savedNum:]
+        return oldIds
 
     def delRun(self, runIds):
         """通过id删除运行记录"""
         for runId in runIds:
             res = self.httpSession.delete(f"{self.gitApi}/{runId}")
+            print(res.headers)
             print(res.text)
 
     def getAllRuns(self):
@@ -74,8 +77,19 @@ class GitActionCleaner():
         runs = self.httpSession.get(f"{self.gitApi}?per_page=100")
         self.runs = runs.json()['workflow_runs']
 
+    def help(self):
+        print('\n1.删除当前仓库里所有cancelled状态的run.')
+        print('2.删除当前workflow比较老的run(默认保存最新的10个run记录).')
+        print('* 需要设置环境变量以下环境变量:')
+        print(f'  * GITHUB_REPOSITORY: {self.envInfo["GITHUB_REPOSITORY"]}')
+        print(f'  * GITHUB_WORKFLOW: {self.envInfo["GITHUB_WORKFLOW"]}')
+        print(f'  * GIT_API_TOKEN: {self.envInfo["GIT_API_TOKEN"]}')
+        print(f'  * recordSavedNum: {self.envInfo["recordSavedNum"]}\n')
+
 if __name__ == '__main__':
+    a = GitActionCleaner()
     try:
-        GitActionCleaner().main()
+        a.main()
     except KeyError as e:
-        print(f'\n需要设置环境变量 {e},或者给出对应的参数')
+        a.help()
+        print(f'\n需要设置环境变量 {e}: {self.envInfo[str(e)]}')
