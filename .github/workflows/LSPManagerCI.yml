@@ -76,6 +76,7 @@ jobs:
           java-version: 11
 
       - name: Write key
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           # 改为使用 gradle 签名
           cd $WORK_DIR
@@ -86,6 +87,7 @@ jobs:
           echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
 
       - name: Cache Gradle
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         uses: actions/cache@v2
         with:
           path: |
