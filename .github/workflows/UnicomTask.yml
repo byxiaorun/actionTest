@@ -64,8 +64,8 @@ jobs:
         sleepSeconds=$((RANDOM % 1800 + 1800)) && doTime=`date -d "+$sleepSeconds second" "+%Y-%m-%d %H:%M:%S"`
         # 只有定时任务触发的才需要延时
         [[ "$GITHUB_EVENT_NAME" == "schedule" ]] && echo "等待 $sleepSeconds 秒后的 $doTime 开始执行" && sleep "$sleepSeconds"s
-        # push commit信息中不是以 skip 开头的才执行
-        [[ $COMMIT_MESSAGE == skip* ]] && echo '跳过任务的执行' || python $WORK_DIR/main.py
+        # push commit信息中不是以 skip 开头的才执行，以skip开头的直接取消
+        [[ $COMMIT_MESSAGE == skip* ]] && curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X POST "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel" || python $WORK_DIR/main.py
 
     - name: Delete Cancelled And Old Runs
       env:
