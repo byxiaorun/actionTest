@@ -76,7 +76,7 @@ jobs:
         cd $WORK_DIR && sleep "$sleepSeconds"s && sh $WORK_DIR/gradlew runMain
 
     - name: Delete Cancelled And Old Runs
-      run: |
-        echo "recordSavedNum=6" >> $GITHUB_ENV
-        wget $deleteOldRunsUrl -q -O deleteOldRuns.py && python3 deleteOldRuns.py
+      env:
+        recordSavedNum: 5
+      run: wget $deleteOldRunsUrl -q -O deleteOldRuns.py && python3 deleteOldRuns.py
 
