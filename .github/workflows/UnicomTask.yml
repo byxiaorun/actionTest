@@ -65,7 +65,7 @@ jobs:
         # 只有定时任务触发的才需要延时
         [[ "$GITHUB_EVENT_NAME" == "schedule" ]] && echo "等待 $sleepSeconds 秒后的 $doTime 开始执行" && sleep "$sleepSeconds"s
         # push commit信息中不是以 skip 开头的才执行
-        [[ $COMMIT_MESSAGE == skip* ]] && python $WORK_DIR/main.py
+        [[ $COMMIT_MESSAGE == skip* ]] && echo '跳过任务的执行' || python $WORK_DIR/main.py
 
     - name: Delete Cancelled And Old Runs
       env:
