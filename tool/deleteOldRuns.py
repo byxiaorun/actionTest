@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding:utf-8 -*-
 import os
+import math
 import requests
 
 class GitActionCleaner():
@@ -17,7 +18,8 @@ class GitActionCleaner():
         # GitHub API Token
         self.gitToken = os.environ['GIT_API_TOKEN']
         # 保留的记录数量 默认10
-        self.savedNum = int(os.environ['recordSavedNum']) if ('recordSavedNum' in os.environ) else 10
+        savedNum = os.environ['recordSavedNum'] if ('recordSavedNum' in os.environ) else 10
+        self.savedNum = int(savedNum) - 1
         # 当前 workflow run 的名字
         self.wfName = os.environ['GITHUB_WORKFLOW']
         # 当前 action 的 '用户名/仓库名' 如 inused/actionTest
@@ -57,7 +59,7 @@ class GitActionCleaner():
                 cancelledIds.append(run['id'])
                 # 从列表中删除
                 self.runs.remove(run)
-        print('删除当前仓库已经取消的run:', cancelledIds)
+        print('删除已经取消的run:', cancelledIds)
         return cancelledIds
 
     def getOldIds(self):
@@ -67,7 +69,7 @@ class GitActionCleaner():
             if run['name'] == self.wfName:
                 oldIds.append(run['id'])
         oldIds = oldIds[self.savedNum:]
-        print('删除当前workflow比较老的run:', oldIds)
+        print('删除比较老的run:', oldIds)
         return oldIds
 
     def delRun(self, runIds):
@@ -78,8 +80,19 @@ class GitActionCleaner():
 
     def getAllRuns(self):
         """获取当前仓库action的所有运行记录 分页最大一次获取100条"""
-        runs = self.httpSession.get(f"{self.gitApi}?per_page=100")
-        self.runs = runs.json()['workflow_runs']
+        self.runs = []
+        currentPageNum = 1
+        while True:
+            res = self.httpSession.get(f"{self.gitApi}?per_page=100&page={currentPageNum}").json()
+            self.runs.extend(res['workflow_runs'])
+            # 总数
+            total = int(res['total_count'])
+            # 总页数
+            totalPageNum = math.ceil(total/100)
+            if (totalPageNum > currentPageNum):
+                currentPageNum += 1
+            else:
+                break
 
     def help(self):
         print('\n1.删除当前仓库里所有cancelled状态的run.')
