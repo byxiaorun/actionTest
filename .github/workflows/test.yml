@@ -32,6 +32,7 @@ env:
   WORK_DIR_NAME: 'LSPosed'
   # 本仓库 commit message
   COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+  recordSavedNum: 5
   GIT_TOOL_PY: 'https://github.com/inused/actionTest/raw/main/tool/deleteOldRuns.py'
 
 jobs:
