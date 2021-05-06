@@ -173,6 +173,10 @@ jobs:
 
       - name: Send Message
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        env:
+          CHANNEL_ID: ${{ secrets.TELEGRAM_CHAT_ID_USER }}
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          FILE: "${{ steps.buildRelease.outputs.releaseDir }}/${{ steps.buildRelease.outputs.releaseName }}.zip"
         run: |
           checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: $GIT_API_AUTH" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
           # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
@@ -185,7 +189,9 @@ jobs:
           # urlencode
           desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
           #curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
-          curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID_USER }}&text=$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg"
+          #curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID_USER }}&text=$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg"
+          ESCAPED="%22$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg%22"
+          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:${ESCAPED}%7D%5D" -F release="@$FILE"
 
       - name: Delete Canceled And Old Workflow
         if: always()
