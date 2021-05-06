@@ -115,7 +115,7 @@ jobs:
           # 输出文件名
           sed -i 's/it.outputFileName.set(\"LSPosedManager/it.outputFileName.set(\"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
           #sed -i 's/outputFileName = \"LSPosedManager/outputFileName = \"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
-          cat $WORK_DIR/app/build.gradle.kts
+          #cat $WORK_DIR/app/build.gradle.kts
 
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -177,7 +177,7 @@ jobs:
           # urlencode
           desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
           ESCAPED="$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg"
-          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:${ESCAPED}%7D%5D" -F "@$FILE"
+          curl -v "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:${ESCAPED}%7D%5D" -F release="@$FILE"
           #curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
 
       - name: Delete Canceled and Old Workflow
