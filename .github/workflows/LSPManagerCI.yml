@@ -113,7 +113,9 @@ jobs:
           # APP 显示名
           sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
           # 输出文件名
-          sed -i 's/outputFileName = \"LSPosedManager/outputFileName = \"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
+          sed -i 's/it.outputFileName.set(\"LSPosedManager/it.outputFileName.set(\"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
+          #sed -i 's/outputFileName = \"LSPosedManager/outputFileName = \"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
+          cat $WORK_DIR/app/build.gradle.kts
 
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -159,6 +161,10 @@ jobs:
 
       - name: Send Message
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        env:
+          CHANNEL_ID: ${{ secrets.TELEGRAM_CHAT_ID_USER }}
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          FILE: "${{ steps.buildRelease.outputs.releaseDir }}/${{ steps.buildRelease.outputs.releaseName }}.apk"
         run: |
           checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: $GIT_API_AUTH" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
           # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
@@ -170,7 +176,9 @@ jobs:
           wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
           desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
-          curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
+          ESCAPED="$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg"
+          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:${ESCAPED}%7D%5D" -F "@$FILE"
+          #curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
 
       - name: Delete Canceled and Old Workflow
         if: always()
