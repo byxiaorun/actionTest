@@ -130,9 +130,9 @@ jobs:
           sed -i "s/io.github.lsposed.lspd/org.lsposed.lspd/g" $WORK_DIR/core/build.gradle.kts
           # Magisk 模块包输出文件名
           sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
-          # Core 校验管理器签名 新增一条
-          sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
-          sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
+          # Core 校验管理器签名 新增一条, 新版本变成了gradle中自动计算签名,无需再手动提供
+          #sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
+          #sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
           # Magisk文件 sha256 计算时不处理 .sha256 文件 本地编译时会出现循环计算所有文件(包括.sha256文件)sha256值直到文件名超长
           #sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
 
