@@ -61,8 +61,9 @@ jobs:
           TIME_INTERVAL=$(expr `date +%s` - `date -d $createTime +%s`)
           # 1. 触发当前action的commit信息以 force 单词开头的(肯定是push)直接开始执行
           # 2. 定时任务schedule触发的且LSP官方最近一次构建在1小时之内的
+          # 3. 手动触发的直接执行
           echo COMMIT_MESSAGE=$COMMIT_MESSAGE
-          [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") ]] && isRun=Y || isRun=N
+          [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] && isRun=Y || isRun=N
           echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
 
       - name: Clone Code
@@ -96,10 +97,8 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-manager-${{ hashFiles('**/*.gradle.kts') }}
+          key: gradle-manager-${{ github.sha }}
           restore-keys: |
-            gradle-core-${{ hashFiles('**/*.gradle.kts') }}
-            gradle-manager
             gradle-
 
       - name: Customize
@@ -120,10 +119,17 @@ jobs:
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: buildRelease
         run: |
-          cd $WORK_DIR && bash $WORK_DIR/gradlew $BUILD_COMMAND
+          cd $WORK_DIR
+          echo 'org.gradle.caching=true' >> gradle.properties
+          echo 'org.gradle.parallel=true' >> gradle.properties
+          echo 'org.gradle.vfs.watch=true' >> gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+          bash $WORK_DIR/gradlew $BUILD_COMMAND
           # 编译产品文件输出路径
           releaseDir=$WORK_DIR/app/build/outputs/apk/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
           # 输出包文件名(无后缀)
+          #echo "::set-output name=releaseName::`ls app/build/outputs/apk/release/LSPosed*-v*-release.apk | awk -F '(/|.apk)' '{print $6}'`"
+          ls -l $releaseDir
           releaseName=`cd $releaseDir && ls iLSPosed*.apk | awk -F '.apk' '{print $1}'` && echo "::set-output name=releaseName::$releaseName" && echo "releaseName=$releaseName" >> $GITHUB_ENV
           # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
           versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
