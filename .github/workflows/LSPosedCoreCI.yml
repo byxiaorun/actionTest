@@ -66,7 +66,7 @@ jobs:
           # 3. 手动触发的直接执行
           echo COMMIT_MESSAGE=$COMMIT_MESSAGE
           echo GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME"
-          [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") || "$GITHUB_EVENT_NAME" == "manually" ]] && isRun=Y || isRun=N
+          [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] && isRun=Y || isRun=N
           echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
 
       - name: Clone Code
