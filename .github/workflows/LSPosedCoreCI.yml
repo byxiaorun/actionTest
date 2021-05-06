@@ -96,10 +96,8 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-core-${{ hashFiles('**/*.gradle.kts') }}
+          key: gradle-core-${{ github.sha }}
           restore-keys: |
-            gradle-manager-${{ hashFiles('**/*.gradle.kts') }}
-            gradle-core
             gradle-
 
       - name: Cache Cmake
@@ -107,12 +105,15 @@ jobs:
         uses: actions/cache@v2
         with:
           path: ~/.ccache
-          key: ccache-${{ hashFiles('core/src/main/cpp') }}
+          key: ccache-cache-${{ github.sha }}
           restore-keys: ccache-
 
       - name: Install ccache
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
-        run: sudo apt-get install -y ccache
+        run: |
+          sudo apt-get install -y ccache
+          ccache -o max_size=2G
+          ccache -o hash_dir=false
 
       - name: Customize
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -137,7 +138,12 @@ jobs:
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         id: buildRelease
         run: |
-          cd $WORK_DIR && bash $WORK_DIR/gradlew $BUILD_COMMAND
+          cd $WORK_DIR
+          echo 'org.gradle.caching=true' >> gradle.properties
+          echo 'org.gradle.parallel=true' >> gradle.properties
+          echo 'org.gradle.vfs.watch=true' >> gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+          bash $WORK_DIR/gradlew $BUILD_COMMAND
           # 编译产品文件输出路径
           releaseDir=$WORK_DIR/core/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
           # 输出包文件名(无后缀)
@@ -177,6 +183,7 @@ jobs:
           # urlencode
           desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n\r\n'))"`
           curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
+          #curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID_USER }}&text=$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg"
 
       - name: Delete Canceled And Old Workflow
         if: always()
