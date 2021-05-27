@@ -13,7 +13,7 @@ on:
 
 env:
   # 新包名
-  MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
+  MANAGER_PACKAGE_NAME_NEW: 'com.byxiaorun.lsp'
   # 老包名
   MANAGER_PACKAGE_NAME_OLD: 'org.lsposed.manager'
   # LSP giturl
