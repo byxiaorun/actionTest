@@ -38,7 +38,7 @@ env:
   LSP_ACTION_NAME: 'Manager'
   # server酱发送信息时的文件名前缀
   SCEND_MSG_NAME: 'iLSPosedManager'
-  deleteOldRunsUrl: 'https://github.com/inused/actionTest/raw/main/tool/deleteOldRuns.py'
+  deleteOldRunsUrl: 'https://github.com/byxiaorun/actionTest/raw/main/tool/deleteOldRuns.py'
 
 jobs:
   build:
