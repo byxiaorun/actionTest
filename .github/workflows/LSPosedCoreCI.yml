@@ -13,7 +13,7 @@ on:
 
 env:
   # 新包名
-  MANAGER_PACKAGE_NAME_NEW: 'me.lspmanager'
+  MANAGER_PACKAGE_NAME_NEW: 'com.byxiaorun.lsp'
   # 老包名
   MANAGER_PACKAGE_NAME_OLD: 'org.lsposed.manager'
   # LSP giturl
@@ -40,7 +40,7 @@ env:
   SCEND_MSG_NAME: 'iLSPosedCore'
   # 新管理器签名
   SIGIN_KEY_BYTE: ${{ secrets.SIGN_KEY_BYTE }}
-  deleteOldRunsUrl: 'https://github.com/inused/actionTest/raw/main/tool/deleteOldRuns.py'
+  deleteOldRunsUrl: 'https://github.com/byxiaorun/actionTest/raw/main/tool/deleteOldRuns.py'
 
 jobs:
   build:
