@@ -33,7 +33,7 @@ env:
   # 本仓库 commit message
   COMMIT_MESSAGE: '${{ github.event.head_commit.message }}'
   # build 命令选项
-  BUILD_COMMAND: 'zipRelease'
+  BUILD_COMMAND: 'zipDebug'
   # 目标 actions NAME 只处理官方该action的信息
   LSP_ACTION_NAME: 'Core'
   # server酱发送信息时的文件名前缀
