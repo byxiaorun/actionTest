@@ -1,0 +1,206 @@
+name: LSPosed Core ReleaseCI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+    - 'task/lspcore'
+    - '.github/workflows/LSPosedReleaseCoreCI.yml'
+  gollum:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */1 * * *'
+
+env:
+  # 新包名
+  MANAGER_PACKAGE_NAME_NEW: 'com.byxiaorun.lsp'
+  # 老包名
+  MANAGER_PACKAGE_NAME_OLD: 'org.lsposed.manager'
+  # LSP giturl
+  LSP_GIT_URL: 'https://github.com/LSPosed/LSPosed.git'
+  # github api 请求头的 accept
+  GIT_API_ACCEPT: 'application/vnd.github.v3+json'
+  # github api token
+  GIT_API_TOKEN: ${{ github.token }}
+  # github api 请求头的验证 token
+  GIT_API_AUTH: 'token ${{ github.token }}'
+  # 获取所有 workflows API 地址 ${{ github.repository }} 和 $GITHUB_REPOSITORY 相同
+  GIT_API_RUNS_LIST: 'https://api.github.com/repos/${{ github.repository }}/actions/runs'
+  # 获取 lsp 官方仓库所有 workflow 的API地址
+  GIT_API_RUNS_LIST_LSP: 'https://api.github.com/repos/LSPosed/LSPosed/actions/runs'
+  # 代码保存位置文件夹名
+  WORK_DIR_NAME: 'LSPosed'
+  # 本仓库 commit message
+  COMMIT_MESSAGE: '${{ github.event.head_commit.message }}'
+  # build 命令选项
+  BUILD_COMMAND: 'zipRelease'
+  # 目标 actions NAME 只处理官方该action的信息
+  LSP_ACTION_NAME: 'Core'
+  # server酱发送信息时的文件名前缀
+  SCEND_MSG_NAME: 'LSPosedRelease'
+  # 新管理器签名
+  SIGIN_KEY_BYTE: ${{ secrets.SIGN_KEY_BYTE }}
+  deleteOldRunsUrl: 'https://github.com/byxiaorun/actionTest/raw/main/tool/deleteOldRuns.py'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get Latest CI Info
+        id: ciInfo
+        run: |
+          # 获取 push 触发的最新一次构建事件
+          latestCI=`python3 -c "import json;from urllib import request as rq;from urllib.parse import quote; runs=json.loads(rq.urlopen(rq.Request('$GIT_API_RUNS_LIST_LSP',headers={'Accept':'$GIT_API_ACCEPT','Authorization':'$GIT_API_AUTH'})).read().decode());runInfo=[run for run in runs['workflow_runs'] if run['event']=='push' and run['name']=='$LSP_ACTION_NAME'][0];print(runInfo['created_at'],'-;-',runInfo['run_number'],'-;-',quote(runInfo['head_commit']['message']))"`
+          # 赋值到变量中
+          eval $(echo $latestCI | awk -F ' -;- ' '{printf("createTime=%s;runNum=%s;commitMsg=%s",$1,$2,$3)}')
+          echo latestCI=$latestCI && echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
+          # run number 用来计算最新的 versionCode
+          # 20210225 a7500c73f3043bc348d5be4004d7ac3b9bf1bd7a 开始，官方获取versionCode 的方式改为了 commitCount+4200
+          #APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
+          # 最新一次构建的commit注释信息
+          echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
+          # 最近一次构建时间 与 当前时间 间隔
+          TIME_INTERVAL=$(expr `date +%s` - `date -d $createTime +%s`)
+          # 1. 触发当前action的commit信息以 force 单词开头的(肯定是push)直接开始执行
+          # 2. 定时任务schedule触发的且LSP官方最近一次构建在1小时之内的
+          # 3. 手动触发的直接执行
+          echo COMMIT_MESSAGE=$COMMIT_MESSAGE
+          echo GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME"
+          [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] && isRun=Y || isRun=N
+          echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
+
+      - name: Clone Code
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        run: |
+          WORK_DIR=$GITHUB_WORKSPACE/$WORK_DIR_NAME && echo "WORK_DIR=$WORK_DIR" >> $GITHUB_ENV
+          echo WORK_DIR=$WORK_DIR && git clone -b master $LSP_GIT_URL $WORK_DIR --recursive
+          echo "GITHUB_WORKSPACE=$WORK_DIR" >> $GITHUB_ENV
+
+      - name: Set up JDK 11
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: Write key
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        run: |
+          echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> $WORK_DIR/gradle.properties
+          echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> $WORK_DIR/gradle.properties
+          echo androidKeyPassword='${{ secrets.SIGN_KEY_PASS }}' >> $WORK_DIR/gradle.properties
+          echo androidStoreFile='key.jks' >> $WORK_DIR/gradle.properties
+          echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > $WORK_DIR/key.jks
+
+      - name: Cache Gradle
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-core-${{ github.sha }}
+          restore-keys: |
+            gradle-
+
+      - name: Cache Cmake
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          key: ccache-cache-${{ github.sha }}
+          restore-keys: ccache-
+
+      - name: Install ccache
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        run: |
+          sudo apt-get install -y ccache
+          ccache -o max_size=2G
+          ccache -o hash_dir=false
+
+      - name: Customize
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        run: |
+          # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
+          # shortcut 中的包名
+          sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
+          # APP 显示名
+          sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
+          sed -i "s/io.github.lsposed.lspd/org.lsposed.lspd/g" $WORK_DIR/core/build.gradle.kts
+          # Magisk 模块包输出文件名
+          sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
+          # Core 校验管理器签名 新增一条, 新版本变成了gradle中自动计算签名,无需再手动提供
+          #sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
+          #sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
+          # Magisk文件 sha256 计算时不处理 .sha256 文件 本地编译时会出现循环计算所有文件(包括.sha256文件)sha256值直到文件名超长
+          #sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
+
+      - name: Build with Gradle
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        id: buildRelease
+        run: |
+          cd $WORK_DIR
+          echo 'org.gradle.caching=true' >> gradle.properties
+          echo 'org.gradle.parallel=true' >> gradle.properties
+          echo 'org.gradle.vfs.watch=true' >> gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+          bash $WORK_DIR/gradlew $BUILD_COMMAND
+          # 编译产品文件输出路径
+          releaseDir=$WORK_DIR/core/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
+          # 输出包文件名(无后缀)
+          releaseName=`cd $releaseDir && ls iLSPosed-v*-release.zip | awk -F '.zip' '{print $1}'` && echo "::set-output name=releaseName::$releaseName" && echo "releaseName=$releaseName" >> $GITHUB_ENV
+          # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
+          versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
+          echo versionCode=$versionCode
+
+      - name: Prepare for Upload
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        id: prepareUpload
+        run: |
+          # 解压
+          unzipPath=$releaseDir/i$WORK_DIR_NAME && unzip $releaseDir/$releaseName.zip -d $unzipPath
+          # 从 zip 包解压出来的文件路径
+          releaseFiles=$unzipPath/** && echo "::set-output name=releaseFiles::$releaseFiles" && echo "releaseFiles=$releaseFiles" >> $GITHUB_ENV
+          #ls $releaseFiles
+
+      - name: Upload release
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.buildRelease.outputs.releaseName }}
+          path: ${{ steps.prepareUpload.outputs.releaseFiles }}
+
+      - name: Send Message
+        if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
+        env:
+          CHANNEL_ID: ${{ secrets.TELEGRAM_CHAT_ID_USER }}
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          FILE: "${{ steps.buildRelease.outputs.releaseDir }}/${{ steps.buildRelease.outputs.releaseName }}.zip"
+        run: |
+          checkSuiteId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: $GIT_API_AUTH" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID" | jq -r '.check_suite_id'`
+          # 文件id 当前的api只能获取 complete 的 artifact, 但是 actions/upload-artifact@v2 无法将运行中的 workflow 的 artifact 标记为 complete, 所以 此时全为空
+          artifactId=`curl -s -H "Accept: $GIT_API_ACCEPT" -H "Authorization: $GIT_API_AUTH" "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/artifacts" | jq -r '.artifacts[0].id'`
+          # 拼接下载地址
+          archiveDownUrl="https://github.com/$GITHUB_REPOSITORY/suites/$checkSuiteId/artifacts/$artifactId"
+          echo checkSuiteId=$checkSuiteId && echo artifactId=$artifactId && echo archiveDownUrl=$archiveDownUrl
+          # workflow 详情页面
+          wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          # urlencode
+          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n'))"`
+          #curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
+          #curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID_USER }}&text=$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg"
+          ESCAPED="%22$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg%22"
+          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:${ESCAPED}%7D%5D" -F release="@$FILE"
+
+      - name: Delete Canceled And Old Workflow
+        if: always()
+        run: wget $deleteOldRunsUrl -q -O deleteOldRuns.py && python3 deleteOldRuns.py
+
+      - name: Cancel or Delete Self if Skiped
+        if: ${{ steps.ciInfo.outputs.isRun == 'N' }}
+        run: |
+          # 删除一般不会成功,应该是因为无法删除正在运行的任务,加上取消 $GITHUB_RUN_ID 和 ${{ github.run_id }} 同一个值
+          curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X POST "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID/cancel"
+          curl -s -H "Authorization: $GIT_API_AUTH" -H "Accept: $GIT_API_ACCEPT" -X DELETE "$GIT_API_RUNS_LIST/$GITHUB_RUN_ID"
+
