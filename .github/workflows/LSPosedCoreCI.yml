@@ -122,12 +122,14 @@ jobs:
         run: |
           # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
-          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
+          #sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
           # shortcut 中的包名
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
           # APP 显示名
           sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
-          sed -i "s/io.github.lsposed.lspd/org.lsposed.lspd/g" $WORK_DIR/core/build.gradle.kts
+          #sed -i "s/org.lsposed.lspd/me.lsp.lspd/g" $WORK_DIR/core/build.gradle.kts
+          # 签名校验
+          sed -i "s/io.github.lsposed.manager/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/ConfigManager.java
           # Magisk 模块包输出文件名
           sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
           # Core 校验管理器签名 新增一条, 新版本变成了gradle中自动计算签名,无需再手动提供
