@@ -45,7 +45,7 @@ jobs:
         env:
           recordSavedNum: 5
         run: |
-          ping gooogle.com -c 4
+          curl gooogle.com
           #export
           #date "+%Y-%m-%d %H:%M:%S"
           #sleep 5s
