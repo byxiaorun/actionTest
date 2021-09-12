@@ -33,6 +33,7 @@ env:
   # 本仓库 commit message
   COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
   GIT_TOOL_PY: 'https://github.com/inused/actionTest/raw/main/tool/deleteOldRuns.py'
+  LSPCompiler: 'https://github.com/${{ github.repository }}/raw/main/tool/LSPCompiler.sh'
 
 jobs:
   build:
@@ -45,14 +46,21 @@ jobs:
         env:
           recordSavedNum: 5
         run: |
+          wget https://github.com/inused/actionTest/raw/main/tool/LSPCompiler.sh -q -O compiler.sh && chmod +x compiler.sh
+          echo '------------------'
+          ls -la
+          echo '------------------'
+          ./compiler.sh
+          #echo $PATH
+          #curl gooogle.com
           #export
           #date "+%Y-%m-%d %H:%M:%S"
           #sleep 5s
           #date "+%Y-%m-%d %H:%M:%S"
           #python3 -c "import requests; print(requests)"
-          wget $GIT_TOOL_PY -q -O deleteOldRuns.py && python3 deleteOldRuns.py
-          echo GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME
-          echo GITHUB_WORKFLOW=$GITHUB_WORKFLOW
+          #wget $GIT_TOOL_PY -q -O deleteOldRuns.py && python3 deleteOldRuns.py
+          #echo GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME
+          #echo GITHUB_WORKFLOW=$GITHUB_WORKFLOW
 #      - name: Get Latest CI Info
 #        run: |
 #          # 获取所有被取消的workflow run id
