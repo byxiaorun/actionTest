@@ -77,19 +77,25 @@ jobs:
             # 构建开始时间、构建执行序号、触发构建的push的commit信息
             createTime=`echo $curRun | jq .created_at` && createTime=`echo ${createTime#*\"}` && createTime=`echo ${createTime%*\"}`
             runNum=`echo $curRun | jq .run_number`
-            commitMsg=`echo $curRun | jq .head_commit.message`
+            # commit信息
+            commitMsg=`echo $curRun | jq .head_commit.message` && commitMsg=`echo ${commitMsg#*\"}` && commitMsg=`echo ${commitMsg%*\"}`
+            # commit url 去除两端引号
+            commitUrl=`echo $curRun | jq .head_sha` && commitUrl=`echo ${commitUrl#*\"}` && commitUrl=`echo ${commitUrl%*\"}`
+            commitUrl="https://github.com/LSPosed/LSPosed/commit/$commitUrl"
             echo latestCI=$latestCI && echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
             # run number 用来计算最新的 versionCode
             # 20210225 a7500c73f3043bc348d5be4004d7ac3b9bf1bd7a 开始，官方获取versionCode 的方式改为了 commitCount+4200
             #APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
             # 最新一次构建的commit注释信息
             echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
+            echo "::set-output name=commitUrl::$commitUrl" && echo "commitUrl=$commitUrl" >> $GITHUB_ENV
             # 最近一次构建时间 与 当前时间 间隔
             TIME_INTERVAL=$(expr `date +%s` - `date -d $createTime +%s`)
             # 1. 触发当前action的commit信息以 force 单词开头的(肯定是push)直接开始执行
             # 2. 定时任务schedule触发的且LSP官方最近一次构建在1小时之内的
             # 3. 手动触发的直接执行
             echo COMMIT_MESSAGE=$COMMIT_MESSAGE
+            echo GITHUB_EVENT_NAME="$GITHUB_EVENT_NAME"
             [[ $COMMIT_MESSAGE == force* || ($TIME_INTERVAL -lt 3600 && "$GITHUB_EVENT_NAME" == "schedule") || "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]] && isRun=Y || isRun=N
           fi
           echo isRun=$isRun && echo "::set-output name=isRun::$isRun" && echo "isRun=$isRun" >> $GITHUB_ENV
@@ -112,11 +118,11 @@ jobs:
         run: |
           # 改为使用 gradle 签名
           cd $WORK_DIR
-          echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> gradle.properties
-          echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> gradle.properties
-          echo androidKeyPassword='${{ secrets.SIGN_KEY_PASS }}' >> gradle.properties
-          echo androidStoreFile='key.jks' >> gradle.properties
-          echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > key.jks
+          echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> $WORK_DIR/gradle.properties
+          echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> $WORK_DIR/gradle.properties
+          echo androidKeyPassword='${{ secrets.SIGN_KEY_PASS }}' >> $WORK_DIR/gradle.properties
+          echo androidStoreFile='key.jks' >> $WORK_DIR/gradle.properties
+          echo ${{ secrets.SIGN_KEY_BASE64 }} | base64 --decode > $WORK_DIR/key.jks
 
       - name: Cache Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -143,7 +149,6 @@ jobs:
           # 输出文件名
           sed -i 's/it.outputFileName.set(\"LSPosedManager/it.outputFileName.set(\"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
           #sed -i 's/outputFileName = \"LSPosedManager/outputFileName = \"iLSPosedManager/g' $WORK_DIR/app/build.gradle.kts
-          #cat $WORK_DIR/app/build.gradle.kts
 
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
@@ -158,8 +163,6 @@ jobs:
           # 编译产品文件输出路径
           releaseDir=$WORK_DIR/app/build/outputs/apk/release && echo "::set-output name=releaseDir::$releaseDir" && echo "releaseDir=$releaseDir" >> $GITHUB_ENV
           # 输出包文件名(无后缀)
-          #echo "::set-output name=releaseName::`ls app/build/outputs/apk/release/LSPosed*-v*-release.apk | awk -F '(/|.apk)' '{print $6}'`"
-          ls -l $releaseDir
           releaseName=`cd $releaseDir && ls iLSPosed*.apk | awk -F '.apk' '{print $1}'` && echo "::set-output name=releaseName::$releaseName" && echo "releaseName=$releaseName" >> $GITHUB_ENV
           # 获取versionCode 官方改为使用 commit 次数加4200的方式确定versionCode,不再使用 runnumber
           versionCode=`echo $releaseName | grep -P '\d{4,}' -o` && echo "::set-output name=versionCode::$versionCode" && echo "versionCode=$versionCode" >> $GITHUB_ENV
@@ -203,12 +206,15 @@ jobs:
           # workflow 详情页面
           wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n'))"`
-          ESCAPED="%22$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg%22"
-          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:${ESCAPED}%7D%5D" -F release="@$FILE"
+          desp=`python3 -c "from urllib.parse import quote;print(quote('$SCEND_MSG_NAME.$versionCode\r\n\r\n[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n'))"`
+          commitMsg=`python3 -c "from urllib.parse import quote;print(quote('$commitMsg'))"`
+          ESCAPED="$desp$commitMsg"
+          # telegram caption 字段最长1024个字符, 如果整体信息超过1024则不再提供commit message而是提供commit url
+          [ `expr length "$ESCAPED"` -ge 1024 ] && ESCAPED="$desp$commitUrl"
+          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:%22${ESCAPED}%22%7D%5D" -F release="@$FILE"
           #curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
 
-      - name: Delete Canceled and Old Workflow
+      - name: Delete Canceled And Old Workflow
         if: always()
         run: wget $deleteOldRunsUrl -q -O deleteOldRuns.py && python3 deleteOldRuns.py
 
