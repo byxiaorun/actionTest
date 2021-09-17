@@ -230,7 +230,8 @@ jobs:
           ESCAPED="$desp$commitMsg"
           # telegram caption 字段最长1024个字符, 如果整体信息超过1024则不再提供commit message而是提供commit url
           [ `expr length "$ESCAPED"` -ge 1024 ] && ESCAPED="$desp$commitUrl"
-          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:%22${ESCAPED}%22%7D%5D" -F release="@$FILE"
+          res=`curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:%22${ESCAPED}%22%7D%5D" -F release="@$FILE"`
+          [[ "`echo $res | jq .ok`" == "true" ]] && echo "文件发送成功" || echo $res
           #curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
 
       - name: Delete Canceled And Old Workflow
