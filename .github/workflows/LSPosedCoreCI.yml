@@ -79,13 +79,18 @@ jobs:
             # 构建开始时间、构建执行序号、触发构建的push的commit信息
             createTime=`echo $curRun | jq .created_at` && createTime=`echo ${createTime#*\"}` && createTime=`echo ${createTime%*\"}`
             runNum=`echo $curRun | jq .run_number`
-            commitMsg=`echo $curRun | jq .head_commit.message`
+            # commit信息
+            commitMsg=`echo $curRun | jq .head_commit.message` && commitMsg=`echo ${commitMsg#*\"}` && commitMsg=`echo ${commitMsg%*\"}`
+            # commit url 去除两端引号
+            commitUrl=`echo $curRun | jq .head_sha` && commitUrl=`echo ${commitUrl#*\"}` && commitUrl=`echo ${commitUrl%*\"}`
+            commitUrl="https://github.com/LSPosed/LSPosed/commit/$commitUrl"
             echo latestCI=$latestCI && echo createTime=$createTime runNum=$runNum commitMsg=$commitMsg
             # run number 用来计算最新的 versionCode
             # 20210225 a7500c73f3043bc348d5be4004d7ac3b9bf1bd7a 开始，官方获取versionCode 的方式改为了 commitCount+4200
             #APPVEYOR_BUILD_NUMBER=`expr $runNum + 4999` && echo "APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER" >> $GITHUB_ENV && echo APPVEYOR_BUILD_NUMBER=$APPVEYOR_BUILD_NUMBER
             # 最新一次构建的commit注释信息
             echo "::set-output name=commitMsg::$commitMsg" && echo "commitMsg=$commitMsg" >> $GITHUB_ENV
+            echo "::set-output name=commitUrl::$commitUrl" && echo "commitUrl=$commitUrl" >> $GITHUB_ENV
             # 最近一次构建时间 与 当前时间 间隔
             TIME_INTERVAL=$(expr `date +%s` - `date -d $createTime +%s`)
             # 1. 触发当前action的commit信息以 force 单词开头的(肯定是push)直接开始执行
@@ -113,6 +118,8 @@ jobs:
       - name: Write key
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
+          # 改为使用 gradle 签名
+          cd $WORK_DIR
           echo androidStorePassword='${{ secrets.SIGN_KEY_STORE_PASS }}' >> $WORK_DIR/gradle.properties
           echo androidKeyAlias='${{ secrets.SIGN_KEY_ALIAS }}' >> $WORK_DIR/gradle.properties
           echo androidKeyPassword='${{ secrets.SIGN_KEY_PASS }}' >> $WORK_DIR/gradle.properties
@@ -148,9 +155,10 @@ jobs:
       - name: Customize
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
+          cd $WORK_DIR
           # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
-          #sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
+          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
           # shortcut 中的包名
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
           # APP 显示名
@@ -217,11 +225,14 @@ jobs:
           # workflow 详情页面
           wfRunUrl="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
           # urlencode
-          desp=`python3 -c "from urllib.parse import quote;print(quote('[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n'))"`
+          desp=`python3 -c "from urllib.parse import quote;print(quote('$SCEND_MSG_NAME.$versionCode\r\n\r\n[任务详情]($wfRunUrl)\r\n\r\n[$releaseName]($archiveDownUrl)\r\n\r\n更新信息:\r\n'))"`
+          commitMsg=`python3 -c "from urllib.parse import quote;print(quote('$commitMsg'))"`
+          ESCAPED="$desp$commitMsg"
+          # telegram caption 字段最长1024个字符, 如果整体信息超过1024则不再提供commit message而是提供commit url
+          [ `expr length "$ESCAPED"` -ge 1024 ] && ESCAPED="$desp$commitUrl"
+          res=`curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:%22${ESCAPED}%22%7D%5D" -F release="@$FILE"`
+          [[ "`echo $res | jq .ok`" == "true" ]] && echo "文件发送成功" || echo $res
           #curl -s "https://sc.ftqq.com/${{ secrets.SERVERCHAN_KEY }}.send?text=$SCEND_MSG_NAME.$versionCode&desp=$desp$commitMsg"
-          #curl -s "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage?chat_id=${{ secrets.TELEGRAM_CHAT_ID_USER }}&text=$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg"
-          ESCAPED="%22$SCEND_MSG_NAME.$versionCode%0A%0A$desp$commitMsg%22"
-          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/sendMediaGroup?chat_id=${CHANNEL_ID}&media=%5B%7B%22type%22:%22document%22,%20%22media%22:%22attach://release%22,%22caption%22:${ESCAPED}%7D%5D" -F release="@$FILE"
 
       - name: Delete Canceled And Old Workflow
         if: always()
