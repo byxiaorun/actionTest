@@ -162,7 +162,21 @@ jobs:
           # shortcut 中的包名
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
           # APP 显示名
-          sed -i "s/>LSPosed</>iLSPManager</g" $WORK_DIR/app/src/main/res/values/strings.xml
+          sed -i "s/>LSPosed</>XRPosed</g" $WORK_DIR/app/src/main/res/values/strings_untranslatable.xml
+          
+          sed -i "s/check_magisk_version/\#check_magisk_version/g" $WORK_DIR/core/magisk_module/customize.sh
+          
+          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          
+          sed -i "s/org.lsposed.manager.LAUNCH_MANAGER/com.byxiaorun.lsp.LAUNCH_MANAGER/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          
+          sed -i "s/org.lsposed.manager.LAUNCH_MANAGER/com.byxiaorun.lsp.LAUNCH_MANAGER/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/ParasiticManagerHooker.java
+          
+          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          
+          sed -i "s/\"LSPosed\"/\"XRPosed\"/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          
+          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/BridgeService.java
           #sed -i "s/org.lsposed.lspd/me.lsp.lspd/g" $WORK_DIR/core/build.gradle.kts
           # 签名校验
           sed -i "s/io.github.lsposed.manager/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/ConfigManager.java
