@@ -166,20 +166,20 @@ jobs:
           
           sed -i "s/check_magisk_version/\#check_magisk_version/g" $WORK_DIR/core/magisk_module/customize.sh
           
-          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
           
-          sed -i "s/org.lsposed.manager.LAUNCH_MANAGER/com.byxiaorun.lsp.LAUNCH_MANAGER/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          sed -i "s/org.lsposed.manager.LAUNCH_MANAGER/com.byxiaorun.lsp.LAUNCH_MANAGER/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
           
           sed -i "s/org.lsposed.manager.LAUNCH_MANAGER/com.byxiaorun.lsp.LAUNCH_MANAGER/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/ParasiticManagerHooker.java
           
-          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
           
-          sed -i "s/\"LSPosed\"/\"XRPosed\"/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
+          sed -i "s/\"LSPosed\"/\"XRPosed\"/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
           
-          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/BridgeService.java
+          sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/BridgeService.java
           #sed -i "s/org.lsposed.lspd/me.lsp.lspd/g" $WORK_DIR/core/build.gradle.kts
           # 签名校验
-          sed -i "s/io.github.lsposed.manager/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/service/ConfigManager.java
+          sed -i "s/io.github.lsposed.manager/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/ConfigManager.java
           # Magisk 模块包输出文件名
           sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
           # Core 校验管理器签名 新增一条, 新版本变成了gradle中自动计算签名,无需再手动提供
