@@ -156,9 +156,9 @@ jobs:
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
         run: |
           cd $WORK_DIR
-          # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
+            # 包名 新版本开始 使用 kotlin 作为 gradle 配置文件，同时代码中使用 BuildConfig.java 获取管理器包名
           sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/build.gradle.kts
-          sed -i "s/$MANAGER_PACKAGE_NAME_OLD/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/app/build.gradle.kts
+
           # shortcut 中的包名
           sed -i "s/\"$MANAGER_PACKAGE_NAME_OLD\"/\"$MANAGER_PACKAGE_NAME_NEW\"/g" $WORK_DIR/app/src/main/res/xml/shortcuts.xml
           # APP 显示名
@@ -177,16 +177,14 @@ jobs:
           sed -i "s/\"LSPosed\"/\"XRPosed\"/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/LSPManagerService.java
           
           sed -i "s/org.lsposed.manager.shortcut/com.byxiaorun.lsp.shortcut/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/BridgeService.java
-          #sed -i "s/org.lsposed.lspd/me.lsp.lspd/g" $WORK_DIR/core/build.gradle.kts
-          # 签名校验
+
+
           sed -i "s/io.github.lsposed.manager/$MANAGER_PACKAGE_NAME_NEW/g" $WORK_DIR/daemon/src/main/java/org/lsposed/lspd/service/ConfigManager.java
+          
           # Magisk 模块包输出文件名
           sed -i 's/val zipFileName = \"/val zipFileName = \"i/g' $WORK_DIR/core/build.gradle.kts
-          # Core 校验管理器签名 新增一条, 新版本变成了gradle中自动计算签名,无需再手动提供
-          #sed -i "s/private static final byte\[] CERTIFICATE/private static final byte[] CERTIFICATE_SELF=$SIGIN_KEY_BYTE,\nCERTIFICATE/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
-          #sed -i "s/return Arrays.equals(result.*/byte[] sbyte=result.getSignerCertificates().get(0).getEncoded();\nreturn (Arrays.equals(sbyte, CERTIFICATE_SELF) || Arrays.equals(sbyte, CERTIFICATE));/g" $WORK_DIR/core/src/main/java/org/lsposed/lspd/util/InstallerVerifier.java
-          # Magisk文件 sha256 计算时不处理 .sha256 文件 本地编译时会出现循环计算所有文件(包括.sha256文件)sha256值直到文件名超长
-          #sed -i 's/if (f.directory) return/if (f.directory || f.name.endsWith(".sha256")) return/g' $WORK_DIR/core/build.gradle
+
+
 
       - name: Build with Gradle
         if: ${{ steps.ciInfo.outputs.isRun == 'Y' && success() }}
